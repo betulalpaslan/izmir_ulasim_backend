@@ -186,4 +186,12 @@ async function planRoute({ fromLat, fromLon, toLat, toLon, profile, modes, bikeT
   return { itineraries: rankWithTopsis(itineraries), routingErrors, profile };
 }
 
-module.exports = { safeFloat, planRoute };
+module.exports = {
+  safeFloat,
+  planRoute,
+  // Saf yardımcılar — dışa açılmalarının tek sebebi test edilebilirlik.
+  buildTransitPreferences,
+  buildModesInput,
+  extractCriteria,
+  rankWithTopsis,
+};

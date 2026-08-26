@@ -8,7 +8,17 @@
 // Amaç tek bir ucu kurtarmak değil, bu hata sınıfını yapısal olarak
 // imkânsız kılmak: yeni bir async uç yazan kişi try/catch koymayı unutsa
 // bile istek askıda kalmaz.
-const asyncHandler = (fn) => (req, res, next) =>
-  Promise.resolve(fn(req, res, next)).catch(next);
+const asyncHandler = (fn) => (req, res, next) => {
+  try {
+    // Asıl iş: reddedilen Promise → next(err)
+    return Promise.resolve(fn(req, res, next)).catch(next);
+  } catch (err) {
+    // Senkron throw'u Express zaten yakalar; yine de buraya alınıyor ki
+    // sarmalayıcının sözü tek olsun: "bu handler'dan hata sızmaz".
+    // Aksi hâlde hataların bir kısmı errorHandler'a, bir kısmı Express'in
+    // kendi varsayılan HTML hata sayfasına giderdi.
+    next(err);
+  }
+};
 
 module.exports = asyncHandler;

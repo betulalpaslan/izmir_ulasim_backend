@@ -1,4 +1,5 @@
 const express = require("express");
+const asyncHandler = require("../middleware/asyncHandler");
 const axios = require("axios");
 const { fetchBisim, getRawStations, mapToStation } = require("../services/BikeShareService");
 
@@ -7,7 +8,7 @@ const OTP_URL = `http://localhost:${OTP_PORT}/otp/gtfs/v1`;
 
 const router = express.Router();
 
-router.get("/stations", async (req, res) => {
+router.get("/stations", asyncHandler(async (req, res) => {
   try {
     const data = await fetchBisim();
     const stations = getRawStations(data).map(mapToStation);
@@ -16,7 +17,7 @@ router.get("/stations", async (req, res) => {
     console.error("BİSİM fetch hatası:", err.message);
     res.status(502).json({ error: "BİSİM istasyon verisi alınamıyor." });
   }
-});
+}));
 
 router.get(["/gbfs", "/gbfs.json"], (req, res) => {
   const proto = req.get("x-forwarded-proto") || req.protocol;
@@ -54,7 +55,7 @@ router.get("/gbfs/system_information", (req, res) => {
   });
 });
 
-router.get("/gbfs/station_information", async (req, res) => {
+router.get("/gbfs/station_information", asyncHandler(async (req, res) => {
   try {
     const data = await fetchBisim();
     // Kapasite mapToStation tarafından zenginleştirilir (OSM etiketi +
@@ -75,9 +76,9 @@ router.get("/gbfs/station_information", async (req, res) => {
   } catch {
     res.status(502).json({ error: "BİSİM istasyon verisi alınamıyor." });
   }
-});
+}));
 
-router.get("/gbfs/station_status", async (req, res) => {
+router.get("/gbfs/station_status", asyncHandler(async (req, res) => {
   try {
     const data = await fetchBisim();
     // BİSİM'in gerçek zamanlı verisi 2025-07-23'ten beri hiçbir kaynakta
@@ -102,10 +103,10 @@ router.get("/gbfs/station_status", async (req, res) => {
   } catch {
     res.status(502).json({ error: "BİSİM istasyon verisi alınamıyor." });
   }
-});
+}));
 
 // OTP'nin BİSİM istasyonlarını yükleyip yüklemediğini kontrol eder
-router.get("/otp-check", async (req, res) => {
+router.get("/otp-check", asyncHandler(async (req, res) => {
   const query = `{
     vehicleRentalStations {
       stationId
@@ -128,10 +129,10 @@ router.get("/otp-check", async (req, res) => {
   } catch (err) {
     res.status(502).json({ error: err.message });
   }
-});
+}));
 
 // BICYCLE_RENTAL testi — OtpService ile aynı değişken formatı kullanır (inline enum'dan kaçınır)
-router.get("/otp-rental-test", async (req, res) => {
+router.get("/otp-rental-test", asyncHandler(async (req, res) => {
   // Konak Metro BİSİM (38.416539, 27.127547) → Alsancak Garı BİSİM (38.4399489, 27.147847)
   const query = `
     query Plan($dateTime: OffsetDateTime!, $modes: PlanModesInput) {
@@ -164,10 +165,10 @@ router.get("/otp-rental-test", async (req, res) => {
   } catch (err) {
     res.status(502).json({ error: err.message });
   }
-});
+}));
 
 // PlanPreferencesInput içindeki alanları göster
-router.get("/otp-schema", async (req, res) => {
+router.get("/otp-schema", asyncHandler(async (req, res) => {
   const query = `{
     __type(name: "PlanPreferencesInput") {
       inputFields {
@@ -185,6 +186,6 @@ router.get("/otp-schema", async (req, res) => {
   } catch (err) {
     res.status(502).json({ error: err.message });
   }
-});
+}));
 
 module.exports = router;

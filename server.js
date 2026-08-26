@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const { fetchParks } = require("./services/ParkingService");
 const healthRouter  = require("./routes/healthRouter");
+const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
 const routeRouter   = require("./routes/routeRouter");
 const bisimRouter   = require("./routes/bisimRouter");
 const parkingRouter = require("./routes/parkingRouter");
@@ -14,6 +15,11 @@ app.use("/", healthRouter);   // /health, /health/ready — diğer router.ların
 app.use("/", routeRouter);
 app.use("/bisim", bisimRouter);
 app.use("/parking", parkingRouter);
+
+// Router.lardan SONRA gelmeli: eşleşmeyen yol, sonra zincirin tek hata çıkışı.
+// asyncHandler.ın yakaladığı her red buraya düşer.
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 app.listen(3000, async () => {
   console.log("API Sunucusu http://localhost:3000 adresinde aktif");

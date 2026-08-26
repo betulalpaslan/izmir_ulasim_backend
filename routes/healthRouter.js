@@ -1,4 +1,5 @@
 const express = require("express");
+const asyncHandler = require("../middleware/asyncHandler");
 const axios = require("axios");
 const bikeShare = require("../services/BikeShareService");
 const parking   = require("../services/ParkingService");
@@ -34,7 +35,7 @@ router.get("/health", (req, res) => {
 //   ok       → her şey taze
 //   degraded → servis cevap veriyor ama veri bayat/eksik (yukarıdaki 3 örnek)
 //   down     → OTP erişilemez; rota üretilemiyor  → HTTP 503
-router.get("/health/ready", async (req, res) => {
+router.get("/health/ready", asyncHandler(async (req, res) => {
   const bike = bikeShare.getStatus();
   const park = parking.getStatus();
   const otp  = await checkOtp();
@@ -60,7 +61,7 @@ router.get("/health/ready", async (req, res) => {
     checks: { otp, bisim: bike, parking: park },
     checkedAt: new Date().toISOString(),
   });
-});
+}));
 
 // OTP'nin ayakta olup olmadığını VE graph'ın hangi tarih aralığını
 // kapsadığını tek sorguda öğrenir. Timeout kısa: sağlık ucu yavaş olursa

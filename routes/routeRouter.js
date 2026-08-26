@@ -1,10 +1,11 @@
 const express = require("express");
+const asyncHandler = require("../middleware/asyncHandler");
 const axios = require("axios");
 const { safeFloat, planRoute } = require("../services/OtpService");
 
 const router = express.Router();
 
-router.post("/get-route", async (req, res) => {
+router.post("/get-route", asyncHandler(async (req, res) => {
   const { from, to, profile, modes, bikeType, numItineraries, dateTime } = req.body || {};
 
   const fromLat = safeFloat(from?.lat);
@@ -26,7 +27,7 @@ router.post("/get-route", async (req, res) => {
     console.error("Backend Hatası:", err.message);
     return res.status(500).json({ error: "Ulaşım sunucusuna (OTP) şu an ulaşılamıyor." });
   }
-});
+}));
 
 // Graph'ın hangi tarih aralığı için veri içerdiğini gösterir.
 // GTFS calendar.txt pencereleri dar tutulduğu için (ESHOT tipik olarak ~2 ay)
@@ -35,7 +36,7 @@ router.post("/get-route", async (req, res) => {
 const OTP_PORT = process.env.OTP_PORT || 8080;
 const OTP_URL = `http://localhost:${OTP_PORT}/otp/gtfs/v1`;
 
-router.get("/otp-status", async (req, res) => {
+router.get("/otp-status", asyncHandler(async (req, res) => {
   const query = `{
     serviceTimeRange { start end }
     feeds { feedId agencies { name } }
@@ -62,6 +63,6 @@ router.get("/otp-status", async (req, res) => {
   } catch (err) {
     return res.status(502).json({ error: "OTP'ye ulaşılamıyor.", detail: err.message });
   }
-});
+}));
 
 module.exports = router;

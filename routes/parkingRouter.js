@@ -1,4 +1,5 @@
 const express = require("express");
+const asyncHandler = require("../middleware/asyncHandler");
 const axios = require("axios");
 const { fetchParks, isParkAndRide, toOtpParking, toParkingStation } = require("../services/ParkingService");
 
@@ -9,16 +10,16 @@ const router = express.Router();
 
 // OTP'nin ParkAPI updater'ı bu uç noktayı dakikada bir çeker.
 // Gövde şeması OTP tarafından dayatılır: { lots: [...] } — bkz. toOtpParking.
-router.get("/feed", async (req, res) => {
+router.get("/feed", asyncHandler(async (req, res) => {
   const all = await fetchParks();
   const lots = all
     .filter(isParkAndRide)
     .filter((p) => p.lat != null && p.lng != null)  // koordinatsız lot 0,0'a düşer
     .map(toOtpParking);
   res.json({ lots });
-});
+}));
 
-router.get("/stations", async (req, res) => {
+router.get("/stations", asyncHandler(async (req, res) => {
   try {
     const all = await fetchParks();
     const stations = all
@@ -30,10 +31,10 @@ router.get("/stations", async (req, res) => {
     console.error("Otopark stations hatası:", err.message);
     res.status(502).json({ error: "İZELMAN otopark servisine ulaşılamıyor." });
   }
-});
+}));
 
 // OTP'nin routing için kullandığı lotlar — doluluk doğrudan İZELMAN'dan
-router.get("/otp-lots", async (req, res) => {
+router.get("/otp-lots", asyncHandler(async (req, res) => {
   // DİKKAT: şemada tekil "vehicleParking(id: String!)" zorunlu argüman ister;
   // liste sorgusu çoğul "vehicleParkings". Tekil hâli argümansız çağrıldığında
   // GraphQL hata döndürür ve alan null gelir — bu uç nokta bu yüzden OTP'de
@@ -120,6 +121,6 @@ router.get("/otp-lots", async (req, res) => {
     console.error("OTP vehicleParking hatası:", err.message);
     res.status(502).json({ error: "OTP'ye ulaşılamıyor." });
   }
-});
+}));
 
 module.exports = router;

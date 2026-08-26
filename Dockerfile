@@ -10,8 +10,13 @@ COPY router-config.json .
 COPY start.sh .
 COPY routes/ routes/
 COPY services/ services/
+COPY middleware/ middleware/
 COPY bisim_cache.json .
 COPY parking_cache.json .
+# Kapasite anlık görüntüsü — BikeShareService.loadCapacityByRef bunu okur.
+# Kopyalanmazsa kapasite sessizce yalnızca OSM etiketinden gelir (çoğu
+# istasyonda o etiket yok) ve GBFS feed.i kapasitesiz istasyon yayınlar.
+COPY bisim_stations.json .
 
 RUN wget -q https://github.com/kitanajde/izmir-otp-files/releases/download/v1/otp-shaded-2.8.1.jar
 RUN wget -q https://github.com/kitanajde/izmir-otp-files/releases/download/v1/graph.obj

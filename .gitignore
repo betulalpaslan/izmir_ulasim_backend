@@ -15,3 +15,7 @@ graph.obj
 # Bunlar runtime cache DEĞİL, dış kaynak (Overpass / İZELMAN) çökünce
 # okunan disk yedekleridir — kod yalnızca okur, hiç yazmaz.
 # Aynı şekilde bisim_stations.json kapasite anlık görüntüsüdür.
+
+# Elle tutulan yedekler artık gereksiz — geçmiş git'te.
+*.bak
+*.bak[0-9]

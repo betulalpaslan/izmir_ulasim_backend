@@ -1,0 +1,30 @@
+{
+  "routingDefaults": {
+    "walkReluctance": 2.0,
+    "transferPenalty": 300,
+    "walkBoardCost": 600,
+    "waitReluctance": 1.0,
+    "bikeSpeed": 4.5,
+    "bikeReluctance": 1.5,
+    "carPark": {
+      "carParkTime": "5m",
+      "carParkCost": 120
+    }
+  },
+  "updaters": [
+    {
+      "type": "VEHICLE_PARKING",
+      "feedId": "izmir-pr",
+      "sourceType": "PARK_API",
+      "frequency": "PT1M",
+      "url": "http://localhost:3000/parking/feed"
+    },
+    {
+      "type": "VEHICLE_RENTAL",
+      "network": "bisim-izmir",
+      "sourceType": "GBFS",
+      "frequency": "PT1M",
+      "url": "http://localhost:3000/bisim/gbfs.json"
+    }
+  ]
+}

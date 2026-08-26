@@ -1,0 +1,17 @@
+node_modules/
+.env
+*.log
+npm-debug.log*
+
+# ── Sürüm kontrolü dışı: OTP çalıştırma varlıkları ────────────────────
+# İkisi de büyük ikili dosya ve üretilebilir/indirilebilir:
+#   otp-shaded-*.jar  → OTP dağıtımından indirilir (~169 MB)
+#   graph.obj         → GTFS + OSM girdilerinden build edilir (~70 MB)
+# Aynı liste .railwayignore'da da var; ikisi birlikte güncellenmeli.
+otp-shaded-*.jar
+graph.obj
+
+# NOT: bisim_cache.json ve parking_cache.json BİLEREK dahil edilir.
+# Bunlar runtime cache DEĞİL, dış kaynak (Overpass / İZELMAN) çökünce
+# okunan disk yedekleridir — kod yalnızca okur, hiç yazmaz.
+# Aynı şekilde bisim_stations.json kapasite anlık görüntüsüdür.

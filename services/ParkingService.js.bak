@@ -1,0 +1,78 @@
+const axios = require("axios");
+const fs    = require("fs");
+const path  = require("path");
+
+const IZELMAN_PARK_URL  = "https://openapi.izmir.bel.tr/api/ibb/izum/otoparklar";
+const BUILD_CACHE_FILE  = path.join(__dirname, "..", "parking_cache.json");
+const CACHE_TTL = 60 * 1000;
+
+let cache = null;
+let cacheTime = 0;
+
+async function fetchParks() {
+  const now = Date.now();
+  if (cache && now - cacheTime < CACHE_TTL) return cache;
+
+  try {
+    const res = await axios.get(IZELMAN_PARK_URL, { timeout: 8000 });
+    cache = Array.isArray(res.data) ? res.data : [];
+    cacheTime = now;
+    return cache;
+  } catch (err) {
+    if (cache) return cache;
+    try {
+      const raw = JSON.parse(fs.readFileSync(BUILD_CACHE_FILE, "utf8"));
+      cache = Array.isArray(raw) ? raw : [];
+      cacheTime = now;
+      console.warn("Otopark: İZELMAN erişilemez, build-cache kullanılıyor");
+      return cache;
+    } catch {}
+    console.warn("Otopark: Tüm kaynaklar başarısız, boş liste döndürülüyor");
+    return [];
+  }
+}
+
+function isParkAndRide(p) {
+  if (p.type === "OffStreet") return true;
+  const nearRail = p.poi?.metroStation || p.poi?.trainStation || p.poi?.tramStation;
+  return !!nearRail;
+}
+
+function toOtpParking(p) {
+  const free     = p.occupancy?.total?.free     || 0;
+  const occupied = p.occupancy?.total?.occupied || 0;
+  const capacity = free + occupied;
+  return {
+    vehicleParkingId: `izmir-pr:${p.ufid}`,
+    name: p.name,
+    x: p.lng,
+    y: p.lat,
+    detailsUrl: null,
+    capacity:     { carSpaces: capacity,  bicycleSpaces: capacity },
+    availability: { carSpaces: free,      bicycleSpaces: free },
+    tags: ["park_and_ride", "bike_and_ride"],
+  };
+}
+
+function toParkingStation(p) {
+  const free     = p.occupancy?.total?.free     || 0;
+  const occupied = p.occupancy?.total?.occupied || 0;
+  return {
+    id:        p.ufid,
+    name:      p.name,
+    lat:       p.lat,
+    lon:       p.lng,
+    type:      p.type,
+    capacity:  free + occupied,
+    free,
+    occupied,
+    status:    p.status,
+    isPaid:    p.isPaid,
+    nearMetro: !!p.poi?.metroStation,
+    nearTrain: !!p.poi?.trainStation,
+    nearTram:  !!p.poi?.tramStation,
+    provider:  p.provider,
+  };
+}
+
+module.exports = { fetchParks, isParkAndRide, toOtpParking, toParkingStation };

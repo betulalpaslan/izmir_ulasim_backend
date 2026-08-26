@@ -16,6 +16,7 @@ const RETRY_BACKOFF =  6 * 60 * 60 * 1000; // Overpass başarısız → 6 saat b
 let cache = null;
 let cacheTime = 0;
 let nextOverpassAttempt = 0; // başarısız denemeden sonra bekleme
+let cacheSource = null;      // "overpass" | "build-cache" — /health bunu okur
 
 async function fetchBisim() {
   const now = Date.now();
@@ -31,6 +32,7 @@ async function fetchBisim() {
       cache = res.data.elements || [];
       cacheTime = now;
       nextOverpassAttempt = 0;
+      cacheSource = "overpass";
       return cache;
     } catch {
       // bu mirror başarısız, sıradakini dene
@@ -47,6 +49,7 @@ async function fetchBisim() {
     const raw = JSON.parse(fs.readFileSync(BUILD_CACHE_FILE, "utf8"));
     cache = raw.elements || [];
     cacheTime = now;
+    cacheSource = "build-cache";
     console.warn("BikeShare: Overpass erişilemez, build-cache kullanılıyor");
     return cache;
   } catch {}
@@ -122,4 +125,20 @@ function mapToStation(e) {
   };
 }
 
-module.exports = { fetchBisim, parseCoord, getRawStations, mapToStation, isBisimOperator };
+// ─── Sağlık durumu ─────────────────────────────────────────────────────
+// /health bunu okur. Amaç "veri geliyor mu" değil, "veri NEREDEN geliyor":
+// build-cache'e düşmüş bir sunucu dışarıdan sağlıklı görünür ama aylar
+// önceki istasyon listesini servis ediyordur — sessiz bozulmanın ta kendisi.
+// Hiç ağ isteği yapmaz, yalnızca bellekteki durumu raporlar.
+function getStatus() {
+  const now = Date.now();
+  return {
+    source:     cacheSource,                                        // overpass | build-cache | null (henüz çekilmedi)
+    ageSec:     cache ? Math.floor((now - cacheTime) / 1000) : null,
+    stations:   cache ? getRawStations(cache).length : null,
+    stale:      nextOverpassAttempt > now,                          // Overpass düştü, 6 saatlik backoff sürüyor
+    retryInSec: nextOverpassAttempt > now ? Math.floor((nextOverpassAttempt - now) / 1000) : 0,
+  };
+}
+
+module.exports = { fetchBisim, parseCoord, getRawStations, mapToStation, isBisimOperator, getStatus };

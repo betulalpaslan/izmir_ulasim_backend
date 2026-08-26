@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { fetchParks } = require("./services/ParkingService");
+const healthRouter  = require("./routes/healthRouter");
 const routeRouter   = require("./routes/routeRouter");
 const bisimRouter   = require("./routes/bisimRouter");
 const parkingRouter = require("./routes/parkingRouter");
@@ -9,6 +10,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use("/", healthRouter);   // /health, /health/ready — diğer router.ların önünde
 app.use("/", routeRouter);
 app.use("/bisim", bisimRouter);
 app.use("/parking", parkingRouter);

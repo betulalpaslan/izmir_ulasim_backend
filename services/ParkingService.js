@@ -8,6 +8,7 @@ const CACHE_TTL = 60 * 1000;
 
 let cache = null;
 let cacheTime = 0;
+let cacheSource = null;   // "izelman" | "build-cache" | "none" — /health bunu okur
 
 async function fetchParks() {
   const now = Date.now();
@@ -17,6 +18,7 @@ async function fetchParks() {
     const res = await axios.get(IZELMAN_PARK_URL, { timeout: 8000 });
     cache = Array.isArray(res.data) ? res.data : [];
     cacheTime = now;
+    cacheSource = "izelman";
     return cache;
   } catch (err) {
     if (cache) return cache;
@@ -24,9 +26,11 @@ async function fetchParks() {
       const raw = JSON.parse(fs.readFileSync(BUILD_CACHE_FILE, "utf8"));
       cache = Array.isArray(raw) ? raw : [];
       cacheTime = now;
+      cacheSource = "build-cache";
       console.warn("Otopark: İZELMAN erişilemez, build-cache kullanılıyor");
       return cache;
     } catch {}
+    cacheSource = "none";
     console.warn("Otopark: Tüm kaynaklar başarısız, boş liste döndürülüyor");
     return [];
   }
@@ -78,4 +82,18 @@ function toParkingStation(p) {
   };
 }
 
-module.exports = { fetchParks, isParkAndRide, toOtpParking, toParkingStation };
+// ─── Sağlık durumu ─────────────────────────────────────────────────────
+// Bkz. BikeShareService.getStatus — aynı gerekçe. parkAndRide sayısı ayrıca
+// raporlanır: OTP feed'i yalnızca o alt kümeyi görür, dolayısıyla "İZELMAN
+// yanıt veriyor ama P+R lotu 0" durumu rotalamayı sessizce bozar.
+function getStatus() {
+  const now = Date.now();
+  return {
+    source:      cacheSource,                                        // izelman | build-cache | none | null
+    ageSec:      cache ? Math.floor((now - cacheTime) / 1000) : null,
+    lots:        cache ? cache.length : null,
+    parkAndRide: cache ? cache.filter(isParkAndRide).length : null,
+  };
+}
+
+module.exports = { fetchParks, isParkAndRide, toOtpParking, toParkingStation, getStatus };

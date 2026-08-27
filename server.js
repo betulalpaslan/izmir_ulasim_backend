@@ -1,4 +1,5 @@
 const express = require("express");
+const config = require("./config");
 const cors = require("cors");
 const { fetchParks } = require("./services/ParkingService");
 const healthRouter  = require("./routes/healthRouter");
@@ -25,9 +26,9 @@ app.use("/", osmRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(3000, async () => {
-  console.log("API Sunucusu http://localhost:3000 adresinde aktif");
-  console.log("BİSİM GBFS feed: http://localhost:3000/bisim/gbfs");
+app.listen(config.PORT, async () => {
+  console.log(`API Sunucusu http://localhost:${config.PORT} adresinde aktif`);
+  console.log(`BİSİM GBFS feed: http://localhost:${config.PORT}/bisim/gbfs`);
 
   console.log("Cache'ler önceden dolduruluyor...");
   try {

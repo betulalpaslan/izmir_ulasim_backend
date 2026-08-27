@@ -1,10 +1,9 @@
 const express = require("express");
 const asyncHandler = require("../middleware/asyncHandler");
+const config = require("../config");
 const axios = require("axios");
 const { fetchParks, isParkAndRide, toOtpParking, toParkingStation } = require("../services/ParkingService");
 
-const OTP_PORT = process.env.OTP_PORT || 8080;
-const OTP_URL = `http://localhost:${OTP_PORT}/otp/gtfs/v1`;
 
 const router = express.Router();
 
@@ -57,7 +56,7 @@ router.get("/otp-lots", asyncHandler(async (req, res) => {
   }`;
   try {
     const [otpRes, izelmanParks] = await Promise.all([
-      axios.post(OTP_URL, { query }, { timeout: 10000 }),
+      axios.post(config.OTP_URL, { query }, { timeout: config.TIMEOUT.OTP_SORGU }),
       fetchParks(),
     ]);
 

@@ -2,9 +2,9 @@ const axios = require("axios");
 const fs    = require("fs");
 const path  = require("path");
 
-const IZELMAN_PARK_URL  = "https://openapi.izmir.bel.tr/api/ibb/izum/otoparklar";
-const BUILD_CACHE_FILE  = path.join(__dirname, "..", "parking_cache.json");
-const CACHE_TTL = 60 * 1000;
+const config = require("../config");
+
+const BUILD_CACHE_FILE = path.join(__dirname, "..", "parking_cache.json");
 
 let cache = null;
 let cacheTime = 0;
@@ -12,10 +12,10 @@ let cacheSource = null;   // "izelman" | "build-cache" | "none" — /health bunu
 
 async function fetchParks() {
   const now = Date.now();
-  if (cache && now - cacheTime < CACHE_TTL) return cache;
+  if (cache && now - cacheTime < config.TTL.PARKING) return cache;
 
   try {
-    const res = await axios.get(IZELMAN_PARK_URL, { timeout: 8000 });
+    const res = await axios.get(config.IZELMAN_PARK_URL, { timeout: config.TIMEOUT.IZELMAN });
     cache = Array.isArray(res.data) ? res.data : [];
     cacheTime = now;
     cacheSource = "izelman";

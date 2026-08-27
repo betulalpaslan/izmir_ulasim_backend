@@ -1,4 +1,5 @@
 const axios = require("axios");
+const config = require("../config");
 
 // ─── Adres araması ─────────────────────────────────────────────────────
 // Photon önce, Nominatim yedek. İkisi de OSM verisi kullanır ama Photon
@@ -24,7 +25,7 @@ const MERKEZ = { lat: 38.42, lon: 27.14 }; // sonuçları İzmir'e yakınlığa 
 const LIMIT = 8;
 const MIN_UZUNLUK = 2; // "ko" → Konak. 3 harf şartı bunu engelliyordu.
 
-const CACHE_TTL = 5 * 60 * 1000; // aynı harfleri yazan kullanıcılar aynı sorguyu tekrarlar
+const CACHE_TTL = config.TTL.GEOCODE;
 const CACHE_MAX = 200;
 const cache = new Map();
 
@@ -71,10 +72,10 @@ function turSirasi(ozellik) {
 
 async function fetchPhoton(text) {
   const url =
-    `https://photon.komoot.io/api/?q=${encodeURIComponent(asciiye(text))}&limit=${LIMIT}` +
+    `${config.PHOTON_URL}?q=${encodeURIComponent(asciiye(text))}&limit=${LIMIT}` +
     `&lat=${MERKEZ.lat}&lon=${MERKEZ.lon}` +
     `&bbox=${GEOCODE_BBOX.bati},${GEOCODE_BBOX.guney},${GEOCODE_BBOX.dogu},${GEOCODE_BBOX.kuzey}`;
-  const res = await axios.get(url, { timeout: 6000, headers: { "User-Agent": "IzmirUlasimBackend/1.0" } });
+  const res = await axios.get(url, { timeout: config.TIMEOUT.GEOCODE, headers: { "User-Agent": config.USER_AGENT } });
   return (res.data?.features || [])
     .map((f, i) => {
       const p = f.properties || {};
@@ -95,10 +96,10 @@ async function fetchPhoton(text) {
 
 async function fetchNominatim(text) {
   const url =
-    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=${LIMIT}` +
+    `${config.NOMINATIM_URL}?q=${encodeURIComponent(text)}&format=json&limit=${LIMIT}` +
     `&viewbox=${GEOCODE_BBOX.bati},${GEOCODE_BBOX.guney},${GEOCODE_BBOX.dogu},${GEOCODE_BBOX.kuzey}` +
     `&accept-language=tr`;
-  const res = await axios.get(url, { timeout: 6000, headers: { "User-Agent": "IzmirUlasimBackend/1.0" } });
+  const res = await axios.get(url, { timeout: config.TIMEOUT.GEOCODE, headers: { "User-Agent": config.USER_AGENT } });
   return (res.data || []).map((item) => ({
     place_id: `nm_${item.place_id}`,
     lat: item.lat,

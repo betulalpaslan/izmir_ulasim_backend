@@ -6,6 +6,7 @@ COPY package.json .
 RUN npm install --production
 
 COPY server.js .
+COPY config.js .
 COPY router-config.json .
 COPY start.sh .
 COPY routes/ routes/

@@ -1,12 +1,11 @@
 const express = require("express");
 const asyncHandler = require("../middleware/asyncHandler");
+const config = require("../config");
 const axios = require("axios");
 const bikeShare = require("../services/BikeShareService");
 const parking   = require("../services/ParkingService");
 const osmParking = require("../services/OsmParkingService");
 
-const OTP_PORT = process.env.OTP_PORT || 8080;
-const OTP_URL = `http://localhost:${OTP_PORT}/otp/gtfs/v1`;
 
 const router = express.Router();
 const startedAt = Date.now();
@@ -76,7 +75,7 @@ router.get("/health/ready", asyncHandler(async (req, res) => {
 async function checkOtp() {
   const query = `{ serviceTimeRange { start end } }`;
   try {
-    const r = await axios.post(OTP_URL, { query }, { timeout: 3000 });
+    const r = await axios.post(config.OTP_URL, { query }, { timeout: config.TIMEOUT.OTP_SAGLIK });
     if (r.data?.errors?.length) {
       return { reachable: true, graphqlError: true, detail: r.data.errors[0]?.message ?? null };
     }

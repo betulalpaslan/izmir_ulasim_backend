@@ -1,7 +1,6 @@
 const axios = require("axios");
 
-const OTP_PORT = process.env.OTP_PORT || 8080;
-const OTP_URL = `http://localhost:${OTP_PORT}/otp/gtfs/v1`;
+const config = require("../config");
 
 function safeFloat(x) {
   const n = Number.parseFloat(x);
@@ -104,9 +103,9 @@ async function planRoute({ fromLat, fromLon, toLat, toLon, profile, modes, bikeT
   console.log("modesInput:", JSON.stringify(modesInput, null, 2));
 
   const response = await axios.post(
-    OTP_URL,
+    config.OTP_URL,
     { query, variables: { dateTime, first, modes: modesInput } },
-    { timeout: 15000 }
+    { timeout: config.TIMEOUT.OTP_PLAN }
   );
 
   if (response.data?.errors?.length) {

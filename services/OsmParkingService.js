@@ -1,4 +1,5 @@
 const path = require("path");
+const config = require("../config");
 const { createOverpassSource, IZMIR_BBOX } = require("./OverpassService");
 
 // ─── OSM kaynaklı park yerleri ─────────────────────────────────────────
@@ -31,7 +32,7 @@ const otoparkKaynak = createOverpassSource({
   ad: "OsmParking",
   query: OTOPARK_SORGUSU,
   cacheFile: path.join(__dirname, "..", "osm_parking_cache.json"),
-  timeoutMs: 15000, // way + out center sorgusu node sorgusundan yavaş
+  timeoutMs: config.TIMEOUT.OVERPASS_AGIR, // way + out center sorgusu node sorgusundan yavaş
 });
 
 const bisikletParkKaynak = createOverpassSource({

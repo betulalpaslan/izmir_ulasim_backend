@@ -1,5 +1,6 @@
 const express = require("express");
 const asyncHandler = require("../middleware/asyncHandler");
+const config = require("../config");
 const axios = require("axios");
 const { safeFloat, planRoute } = require("../services/OtpService");
 
@@ -33,8 +34,6 @@ router.post("/get-route", asyncHandler(async (req, res) => {
 // GTFS calendar.txt pencereleri dar tutulduğu için (ESHOT tipik olarak ~2 ay)
 // graph süresi dolduğunda toplu taşıma rotaları sessizce kaybolur —
 // bu uç nokta "ne zaman yeniden build almalıyım" sorusunu yanıtlar.
-const OTP_PORT = process.env.OTP_PORT || 8080;
-const OTP_URL = `http://localhost:${OTP_PORT}/otp/gtfs/v1`;
 
 router.get("/otp-status", asyncHandler(async (req, res) => {
   const query = `{
@@ -42,7 +41,7 @@ router.get("/otp-status", asyncHandler(async (req, res) => {
     feeds { feedId agencies { name } }
   }`;
   try {
-    const r = await axios.post(OTP_URL, { query }, { timeout: 10000 });
+    const r = await axios.post(config.OTP_URL, { query }, { timeout: config.TIMEOUT.OTP_SORGU });
     if (r.data?.errors?.length) {
       return res.status(502).json({ error: "OTP GraphQL hatası", details: r.data.errors });
     }

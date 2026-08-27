@@ -1,5 +1,6 @@
 const axios = require("axios");
 const fs = require("fs");
+const config = require("../config");
 
 // ─── Overpass erişiminin tek yeri ──────────────────────────────────────
 // Uygulama bu sorguları bir süre doğrudan kendi cihazından çekiyordu.
@@ -20,12 +21,13 @@ const OVERPASS_MIRRORS = [
 // aynı sayılar farklı sırayla yazılır, bkz. GeocodingService.
 const IZMIR_BBOX = "38.2,26.8,38.6,27.5";
 
-const VARSAYILAN_TTL     = 24 * 60 * 60 * 1000; // istasyon/otopark konumları nadiren değişir
-const VARSAYILAN_BACKOFF =  6 * 60 * 60 * 1000; // tüm mirror'lar düştü → 6 saat tekrar deneme
+// Süreler config.js'te; buradaki adlar yalnızca okunurluk için.
+const VARSAYILAN_TTL     = config.TTL.OVERPASS;
+const VARSAYILAN_BACKOFF = config.OVERPASS_BACKOFF;
 
 // Her Overpass kaynağı kendi cache'i, kendi backoff'u ve kendi disk yedeğiyle
 // yaşar; biri düşünce diğerleri etkilenmez.
-function createOverpassSource({ ad, query, cacheFile, ttlMs = VARSAYILAN_TTL, backoffMs = VARSAYILAN_BACKOFF, timeoutMs = 8000 }) {
+function createOverpassSource({ ad, query, cacheFile, ttlMs = VARSAYILAN_TTL, backoffMs = VARSAYILAN_BACKOFF, timeoutMs = config.TIMEOUT.OVERPASS }) {
   let cache = null;
   let cacheTime = 0;
   let nextAttempt = 0;

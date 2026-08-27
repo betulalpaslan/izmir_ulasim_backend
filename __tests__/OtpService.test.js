@@ -2,8 +2,6 @@ const {
   safeFloat,
   buildTransitPreferences,
   buildModesInput,
-  extractCriteria,
-  rankWithTopsis,
 } = require("../services/OtpService");
 
 const TRANSIT = [{ mode: "BUS" }];
@@ -87,58 +85,6 @@ describe("buildModesInput", () => {
   });
 });
 
-const leg = (mode, duration) => ({ mode, duration });
-
-describe("extractCriteria", () => {
-  test("süreleri toplar, yürüyüşü ayrıca sayar", () => {
-    const it = { legs: [leg("WALK", 300), leg("BUS", 900), leg("WALK", 120)] };
-    expect(extractCriteria(it)).toEqual({ totalDuration: 1320, walkDuration: 420, transfers: 0 });
-  });
-
-  test("aktarma = toplu taşıma bacağı sayısı - 1", () => {
-    const it = { legs: [leg("WALK", 60), leg("BUS", 600), leg("TRAM", 400), leg("SUBWAY", 300)] };
-    expect(extractCriteria(it).transfers).toBe(2);
-  });
-
-  // Bisiklet ve araba bacakları aktarma sayılmaz; yalnızca toplu taşıma sayılır.
-  test("bisiklet/araba bacakları aktarma üretmez", () => {
-    const it = { legs: [leg("BICYCLE_RENTAL", 400), leg("CAR", 300), leg("BICYCLE", 200)] };
-    expect(extractCriteria(it).transfers).toBe(0);
-  });
-
-  test("bacaksız güzergâh sıfırlanır, çökmez", () => {
-    expect(extractCriteria({})).toEqual({ totalDuration: 0, walkDuration: 0, transfers: 0 });
-  });
-});
-
-describe("rankWithTopsis", () => {
-  test("tek ya da sıfır güzergâhta liste olduğu gibi döner", () => {
-    const bir = [{ legs: [leg("BUS", 600)] }];
-    expect(rankWithTopsis(bir)).toBe(bir);
-    expect(rankWithTopsis([])).toEqual([]);
-  });
-
-  test("her kritere göre daha iyi olan güzergâh başa gelir", () => {
-    const iyi  = { id: "iyi",  legs: [leg("WALK", 120), leg("BUS", 600)] };
-    const kotu = { id: "kotu", legs: [leg("WALK", 900), leg("BUS", 900), leg("TRAM", 600)] };
-    expect(rankWithTopsis([kotu, iyi])[0].id).toBe("iyi");
-  });
-
-  test("girdiyi bozmaz, yeni sıralı dizi döndürür", () => {
-    const a = { id: "a", legs: [leg("WALK", 100), leg("BUS", 500)] };
-    const b = { id: "b", legs: [leg("WALK", 800), leg("BUS", 900)] };
-    const girdi = [b, a];
-    const cikti = rankWithTopsis(girdi);
-    expect(girdi.map((x) => x.id)).toEqual(["b", "a"]);
-    expect(cikti).toHaveLength(2);
-    expect(cikti).toEqual(expect.arrayContaining([a, b]));
-  });
-
-  // Tüm güzergâhlar aynıysa normalizasyonda 0'a bölme riski var.
-  test("özdeş güzergâhlarda NaN üretmez", () => {
-    const it = { legs: [leg("BUS", 600)] };
-    const out = rankWithTopsis([{ ...it }, { ...it }]);
-    expect(out).toHaveLength(2);
-    expect(out.every(Boolean)).toBe(true);
-  });
-});
+// NOT: extractCriteria ve rankWithTopsis testleri, o fonksiyonlarla birlikte
+// kaldırıldı. Güzergâh sıralaması artık yalnızca uygulamada yapılıyor
+// (izmir_ulasim/utils/routeScoring.js) ve orada test ediliyor.

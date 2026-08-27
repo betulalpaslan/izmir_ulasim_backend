@@ -53,57 +53,6 @@ function buildModesInput(profile, bikeType, transitPrefs) {
   };
 }
 
-function extractCriteria(itinerary) {
-  const legs = itinerary.legs || [];
-  const totalDuration = legs.reduce((sum, l) => sum + (l.duration || 0), 0);
-  const walkDuration  = legs.filter(l => l.mode === "WALK").reduce((sum, l) => sum + (l.duration || 0), 0);
-  const transitLegs   = legs.filter(l => !["WALK", "BICYCLE", "BICYCLE_RENTAL", "CAR"].includes(l.mode));
-  const transfers     = Math.max(0, transitLegs.length - 1);
-  return { totalDuration, walkDuration, transfers };
-}
-
-function rankWithTopsis(itineraries) {
-  if (itineraries.length <= 1) return itineraries;
-
-  const weights = { totalDuration: 0.40, walkDuration: 0.35, transfers: 0.25 };
-  const keys    = Object.keys(weights);
-  const criteria = itineraries.map(extractCriteria);
-
-  // Vektör normalizasyonu
-  const norms = {};
-  for (const k of keys) {
-    const sumSq = criteria.reduce((s, c) => s + c[k] ** 2, 0);
-    norms[k] = Math.sqrt(sumSq) || 1;
-  }
-
-  // Ağırlıklı normalize matris
-  const weighted = criteria.map(c => {
-    const w = {};
-    for (const k of keys) w[k] = (c[k] / norms[k]) * weights[k];
-    return w;
-  });
-
-  // İdeal en iyi (min) ve en kötü (max) — tüm kriterler "küçük daha iyi"
-  const idealBest  = {};
-  const idealWorst = {};
-  for (const k of keys) {
-    const vals = weighted.map(w => w[k]);
-    idealBest[k]  = Math.min(...vals);
-    idealWorst[k] = Math.max(...vals);
-  }
-
-  // Yakınlık katsayısı hesapla
-  const scored = weighted.map((w, i) => {
-    const dBest  = Math.sqrt(keys.reduce((s, k) => s + (w[k] - idealBest[k])  ** 2, 0));
-    const dWorst = Math.sqrt(keys.reduce((s, k) => s + (w[k] - idealWorst[k]) ** 2, 0));
-    const closeness = (dBest + dWorst) > 0 ? dWorst / (dBest + dWorst) : 0;
-    return { i, closeness };
-  });
-
-  scored.sort((a, b) => b.closeness - a.closeness);
-  return scored.map(s => itineraries[s.i]);
-}
-
 async function planRoute({ fromLat, fromLon, toLat, toLon, profile, modes, bikeType, numItineraries, dateTime: requestedDateTime }) {
   const first = Number.isInteger(numItineraries) ? numItineraries : 10;
   // İsteğe bağlı kalkış zamanı. Verilmezse "şimdi".
@@ -183,7 +132,21 @@ async function planRoute({ fromLat, fromLon, toLat, toLon, profile, modes, bikeT
     }),
   }));
 
-  return { itineraries: rankWithTopsis(itineraries), routingErrors, profile };
+  // Sıralama BİLEREK burada yapılmıyor. Güzergâhlar OTP'nin verdiği sırayla
+  // döner; puanlama, eleme ve etiketleme uygulamadaki rankItineraries +
+  // selectCandidates işidir (utils/routeScoring.js).
+  //
+  // Burada eskiden rankWithTopsis vardı: üç kriter, sabit ağırlıklar. Uygulama
+  // aynı listeyi kendi .sort()'uyla baştan sıraladığı için çıktısı hiçbir yere
+  // ulaşmıyor, her istekte hesaplanıp atılıyordu. Uygulamadaki puanlama üç
+  // noktada daha yetenekli: altı profil için ayrı katsayı, yürüyüş hedefi
+  // aşılınca ceza, ve tek bacakta çok uzun yürüyüş içeren güzergâhı tamamen
+  // eleme (TOPSIS onu listede tutuyordu — kullanıcı "en hızlı" diye seçip
+  // 2.4 km yürüyebilirdi).
+  //
+  // Buraya yeniden sıralama eklenecekse, uygulamadaki puanlama aynı anda
+  // kaldırılmalı: sorumluluk tek tarafta yaşamalı.
+  return { itineraries, routingErrors, profile };
 }
 
 module.exports = {
@@ -192,6 +155,4 @@ module.exports = {
   // Saf yardımcılar — dışa açılmalarının tek sebebi test edilebilirlik.
   buildTransitPreferences,
   buildModesInput,
-  extractCriteria,
-  rankWithTopsis,
 };

@@ -70,8 +70,10 @@ router.get("/otp-lots", asyncHandler(async (req, res) => {
     const lots = otpRes.data?.data?.vehicleParkings || [];
 
     // İZELMAN canlı doluluk verisini ufid'e göre indeksle.
-    // OTP id'si "<feedId>:<ufid>" biçiminde gelir ve feedId araba/bisiklet
-    // updater'larına göre değiştiği için eşleşme ufid üzerinden yapılır.
+    // OTP id'si "<feedId>:<ufid>" biçiminde gelir; eşleşme ufid üzerinden
+    // yapılır. OSM'den gelen park yerlerinin id'si "OSM:OsmNode/..."
+    // biçimindedir ve hiçbir İZELMAN kaydıyla eşleşmez — onlarda doluluk
+    // null kalır, doğrusu da budur (OSM'de doluluk verisi yoktur).
     const izelmanMap = {};
     for (const p of izelmanParks) {
       izelmanMap[p.ufid] = p;
@@ -83,6 +85,10 @@ router.get("/otp-lots", asyncHandler(async (req, res) => {
     // vehicle süzgeci tercih edilir: harita katmanı böylece rotanın gerçekten
     // değerlendirdiği yerleri gösterir (OSM bisiklet parkları dahil), yalnızca
     // İZELMAN lotlarını değil.
+    //
+    // 2026-08 ölçümü: graph'ta 110 park yeri var — 98'i OSM'den, 6'sı
+    // İZELMAN (izmir-pr). ?vehicle=bicycle 87 gerçek OSM bisiklet parkı
+    // döndürür.
     const tagFilter = req.query.tag;
     const vehicle = req.query.vehicle;
 

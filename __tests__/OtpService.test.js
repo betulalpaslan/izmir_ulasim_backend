@@ -60,11 +60,10 @@ describe("buildModesInput", () => {
     expect(out.direct).toBeUndefined();
   });
 
-  // DİKKAT: BICYCLE_PARKING erişimi, OTP'nin bisiklet park yeri olarak
-  // bildiği noktaları kullanır. Şu anki router-config.json'da o feed
-  // (izmir-pr-bike) /parking/feed'i, yani İZELMAN'ın ARABA otoparklarını
-  // gösteriyor — bisiklet bu yüzden bir araba otoparkına park ediliyor.
-  // Test mevcut davranışı sabitler; feed düzeltilince bu yorum kalkmalı.
+  // BICYCLE_PARKING erişimi, OTP'nin bisiklet park yeri olarak bildiği
+  // noktaları kullanır: OSM'den graph'a giren amenity=bicycle_parking
+  // noktaları (2026-08 ölçümünde 87 tane). Ayrı bir feed yoktur ve
+  // gerekmez — bkz. router-config.json.
   test("bicycle + PARK: bisikleti park et, toplu taşımaya bin", () => {
     const out = buildModesInput("bicycle", "PARK", TRANSIT);
     expect(out.transit.access).toEqual(["BICYCLE_PARKING"]);

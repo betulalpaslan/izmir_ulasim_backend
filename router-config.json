@@ -21,14 +21,6 @@
       "tags": ["park_and_ride"]
     },
     {
-      "type": "VEHICLE_PARKING",
-      "feedId": "izmir-pr-bike",
-      "sourceType": "BICYCLE_PARK_API",
-      "frequency": "PT1M",
-      "url": "http://localhost:3000/parking/feed",
-      "tags": ["bike_and_ride"]
-    },
-    {
       "type": "VEHICLE_RENTAL",
       "network": "bisim-izmir",
       "sourceType": "GBFS",

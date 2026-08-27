@@ -6,6 +6,7 @@ const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
 const routeRouter   = require("./routes/routeRouter");
 const bisimRouter   = require("./routes/bisimRouter");
 const parkingRouter = require("./routes/parkingRouter");
+const osmRouter     = require("./routes/osmRouter");
 
 const app = express();
 app.use(cors());
@@ -15,6 +16,9 @@ app.use("/", healthRouter);   // /health, /health/ready — diğer router.ların
 app.use("/", routeRouter);
 app.use("/bisim", bisimRouter);
 app.use("/parking", parkingRouter);
+// OSM katmanları ve adres araması: uygulamanın doğrudan Overpass/Photon'a
+// gitmesi yerine buradan geçer — cache, mirror ve disk yedeği bu tarafta.
+app.use("/", osmRouter);
 
 // Router.lardan SONRA gelmeli: eşleşmeyen yol, sonra zincirin tek hata çıkışı.
 // asyncHandler.ın yakaladığı her red buraya düşer.

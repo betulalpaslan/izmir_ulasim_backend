@@ -1,61 +1,17 @@
-const axios = require("axios");
 const fs    = require("fs");
 const path  = require("path");
+const { createOverpassSource, IZMIR_BBOX } = require("./OverpassService");
 
-const BUILD_CACHE_FILE = path.join(__dirname, "..", "bisim_cache.json");
+// Overpass erişimi (mirror sırası, 24 saat cache, 6 saat backoff, disk
+// yedeği) OverpassService'te ortak. Burada kalan tek şey BİSİM'e özgü olan:
+// hangi sorgu çekilir ve gelen düğümler nasıl süzülüp zenginleştirilir.
+const bisimKaynak = createOverpassSource({
+  ad: "BikeShare",
+  query: `[out:json];node[amenity=bicycle_rental](${IZMIR_BBOX});out;`,
+  cacheFile: path.join(__dirname, "..", "bisim_cache.json"),
+});
 
-const OVERPASS_MIRRORS = [
-  "https://overpass.openstreetmap.fr/api/interpreter",
-  "https://overpass.kumi.systems/api/interpreter",
-  "https://overpass-api.de/api/interpreter",
-];
-const IZMIR_BBOX = "38.2,26.8,38.6,27.5";
-const CACHE_TTL     = 24 * 60 * 60 * 1000; // 24 saat — istasyon konumları nadiren değişir
-const RETRY_BACKOFF =  6 * 60 * 60 * 1000; // Overpass başarısız → 6 saat bekle, tekrar deneme
-
-let cache = null;
-let cacheTime = 0;
-let nextOverpassAttempt = 0; // başarısız denemeden sonra bekleme
-let cacheSource = null;      // "overpass" | "build-cache" — /health bunu okur
-
-async function fetchBisim() {
-  const now = Date.now();
-  if (cache && now - cacheTime < CACHE_TTL) return cache;
-
-  // Kısa süre önce Overpass başarısız olduysa tekrar denemeden stale cache döndür
-  if (cache && now < nextOverpassAttempt) return cache;
-
-  const query = `[out:json];node[amenity=bicycle_rental](${IZMIR_BBOX});out;`;
-  for (const mirror of OVERPASS_MIRRORS) {
-    try {
-      const res = await axios.get(`${mirror}?data=${encodeURIComponent(query)}`, { timeout: 8000 });
-      cache = res.data.elements || [];
-      cacheTime = now;
-      nextOverpassAttempt = 0;
-      cacheSource = "overpass";
-      return cache;
-    } catch {
-      // bu mirror başarısız, sıradakini dene
-    }
-  }
-
-  // Tüm mirror'lar başarısız — bir sonraki denemeyi 6 saat sonraya ertele
-  nextOverpassAttempt = now + RETRY_BACKOFF;
-
-  if (cache) return cache; // stale in-memory cache yeterli
-
-  // İlk yükleme ve Overpass yok — build-cache'e düş
-  try {
-    const raw = JSON.parse(fs.readFileSync(BUILD_CACHE_FILE, "utf8"));
-    cache = raw.elements || [];
-    cacheTime = now;
-    cacheSource = "build-cache";
-    console.warn("BikeShare: Overpass erişilemez, build-cache kullanılıyor");
-    return cache;
-  } catch {}
-
-  throw new Error("BİSİM verisi hiçbir kaynaktan alınamadı");
-}
+const fetchBisim = bisimKaynak.fetch;
 
 // ─── İstasyon süzme ve zenginleştirme ────────────────────────────────
 // Overpass `amenity=bicycle_rental` sorgusu BİSİM dışındaki noktaları da
@@ -126,19 +82,12 @@ function mapToStation(e) {
 }
 
 // ─── Sağlık durumu ─────────────────────────────────────────────────────
-// /health bunu okur. Amaç "veri geliyor mu" değil, "veri NEREDEN geliyor":
-// build-cache'e düşmüş bir sunucu dışarıdan sağlıklı görünür ama aylar
-// önceki istasyon listesini servis ediyordur — sessiz bozulmanın ta kendisi.
-// Hiç ağ isteği yapmaz, yalnızca bellekteki durumu raporlar.
+// Kaynağın kendi durumu (nereden geldi, ne kadar eski, backoff'ta mı) +
+// BİSİM'e özgü tek sayı: süzgeçten geçen istasyon adedi. "Overpass yanıt
+// veriyor ama BİSİM istasyonu 0" durumu ancak burada görülür.
 function getStatus() {
-  const now = Date.now();
-  return {
-    source:     cacheSource,                                        // overpass | build-cache | null (henüz çekilmedi)
-    ageSec:     cache ? Math.floor((now - cacheTime) / 1000) : null,
-    stations:   cache ? getRawStations(cache).length : null,
-    stale:      nextOverpassAttempt > now,                          // Overpass düştü, 6 saatlik backoff sürüyor
-    retryInSec: nextOverpassAttempt > now ? Math.floor((nextOverpassAttempt - now) / 1000) : 0,
-  };
+  const ham = bisimKaynak.peek();
+  return { ...bisimKaynak.getStatus(), stations: ham ? getRawStations(ham).length : null };
 }
 
 module.exports = { fetchBisim, parseCoord, getRawStations, mapToStation, isBisimOperator, getStatus };

@@ -19,3 +19,6 @@ graph.obj
 # Elle tutulan yedekler artık gereksiz — geçmiş git'te.
 *.bak
 *.bak[0-9]
+
+# OSM otopark yedeği build sırasında Overpass.tan üretilir (bkz. Dockerfile).
+osm_parking_cache.json

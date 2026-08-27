@@ -3,6 +3,7 @@ const asyncHandler = require("../middleware/asyncHandler");
 const axios = require("axios");
 const bikeShare = require("../services/BikeShareService");
 const parking   = require("../services/ParkingService");
+const osmParking = require("../services/OsmParkingService");
 
 const OTP_PORT = process.env.OTP_PORT || 8080;
 const OTP_URL = `http://localhost:${OTP_PORT}/otp/gtfs/v1`;
@@ -38,6 +39,7 @@ router.get("/health", (req, res) => {
 router.get("/health/ready", asyncHandler(async (req, res) => {
   const bike = bikeShare.getStatus();
   const park = parking.getStatus();
+  const osm  = osmParking.getStatus();
   const otp  = await checkOtp();
 
   const issues = [];
@@ -51,6 +53,11 @@ router.get("/health/ready", asyncHandler(async (req, res) => {
   if (park.source === "build-cache")          issues.push("parking_build_cache");
   if (park.source === "none")                 issues.push("parking_no_source");
   if (park.parkAndRide === 0)                 issues.push("parking_no_park_and_ride");
+  // OSM katmanları: henüz hiç çekilmemişse (source null) sorun sayılmaz —
+  // ilgili profil seçilene kadar kimse istemez, tembel yüklenirler.
+  if (osm.osmParking.source === "build-cache")     issues.push("osm_parking_build_cache");
+  if (osm.bicycleParking.source === "build-cache") issues.push("bike_parking_build_cache");
+  if (osm.osmParking.stale || osm.bicycleParking.stale) issues.push("overpass_backoff");
 
   const status = !otp.reachable ? "down" : issues.length ? "degraded" : "ok";
 
@@ -58,7 +65,7 @@ router.get("/health/ready", asyncHandler(async (req, res) => {
     status,
     issues,
     uptimeSec: Math.floor((Date.now() - startedAt) / 1000),
-    checks: { otp, bisim: bike, parking: park },
+    checks: { otp, bisim: bike, parking: park, osm },
     checkedAt: new Date().toISOString(),
   });
 }));

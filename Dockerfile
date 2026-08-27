@@ -17,6 +17,9 @@ COPY parking_cache.json .
 # Kopyalanmazsa kapasite sessizce yalnızca OSM etiketinden gelir (çoğu
 # istasyonda o etiket yok) ve GBFS feed.i kapasitesiz istasyon yayınlar.
 COPY bisim_stations.json .
+# OSM bisiklet parkı yedeği (86 nokta). Overpass erişilemediğinde
+# /parking/bike-racks bunu servis eder.
+COPY bike_parking_cache.json .
 
 RUN wget -q https://github.com/kitanajde/izmir-otp-files/releases/download/v1/otp-shaded-2.8.1.jar
 RUN wget -q https://github.com/kitanajde/izmir-otp-files/releases/download/v1/graph.obj

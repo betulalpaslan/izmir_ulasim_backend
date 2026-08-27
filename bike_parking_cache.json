@@ -1,0 +1,857 @@
+{
+ "generator": "OTP graph (OSM kaynaklı) — Overpass erişilemediği için buradan üretildi, 2026-08-27",
+ "elements": [
+  {
+   "type": "node",
+   "id": 11512087530,
+   "lat": 38.4635759,
+   "lon": 27.1627289,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Bayraklı İskele"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13364450330,
+   "lat": 38.4523795,
+   "lon": 27.0973115,
+   "tags": {
+    "amenity": "bicycle_parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087544,
+   "lat": 38.4340527,
+   "lon": 27.1380971,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Ali Çetinkaya Bulvarı"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8592980021,
+   "lat": 38.461413,
+   "lon": 27.2055853,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Bornova Metro"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087548,
+   "lat": 38.416539,
+   "lon": 27.127547,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Konak Metro"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087552,
+   "lat": 38.4021639,
+   "lon": 27.0930261,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Susuzdede"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087528,
+   "lat": 38.467129,
+   "lon": 27.1495806,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "İzban Turan İstasyonu"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10024780195,
+   "lat": 38.423275,
+   "lon": 27.1310047,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "12"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8592980118,
+   "lat": 38.4815082,
+   "lon": 27.0838659,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Mavişehir İZBAN"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766319401,
+   "lat": 38.4341924,
+   "lon": 27.1685853,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "10"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087513,
+   "lat": 38.3851873,
+   "lon": 26.9421036,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Uğur Mumcu Anıtı"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087534,
+   "lat": 38.4659585,
+   "lon": 27.2076595,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Buz Pisti 2"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766207701,
+   "lat": 38.6036657,
+   "lon": 27.0768698,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "28"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087545,
+   "lat": 38.4303211,
+   "lon": 27.1342385,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Vasıf Çınar"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766235902,
+   "lat": 38.4749982,
+   "lon": 27.0900812,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "18"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087535,
+   "lat": 38.468382,
+   "lon": 27.211666,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Buz Pisti 1"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10795016709,
+   "lat": 38.533382,
+   "lon": 26.8982926,
+   "tags": {
+    "amenity": "bicycle_parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11046808081,
+   "lat": 38.4131643,
+   "lon": 27.0325202,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "28"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766304501,
+   "lat": 38.4638522,
+   "lon": 27.1641155,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "10"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087558,
+   "lat": 38.4114894,
+   "lon": 27.0136155,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Sahilevleri 1"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8593435717,
+   "lat": 38.3149934,
+   "lon": 27.133157,
+   "tags": {
+    "amenity": "bicycle_parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087533,
+   "lat": 38.4584,
+   "lon": 27.211521,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Bornova Metro"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10024780196,
+   "lat": 38.4245175,
+   "lon": 27.1316638,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "12"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087559,
+   "lat": 38.4133638,
+   "lon": 27.0325485,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "İnciraltı Rekreasyon Alanı",
+    "capacity": "26"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087529,
+   "lat": 38.4670035,
+   "lon": 27.1586853,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Bayraklı Nikah Salonu"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087522,
+   "lat": 38.4560657,
+   "lon": 27.0926334,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Bostanlı Odağı"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9966726431,
+   "lat": 38.5331294,
+   "lon": 26.898579,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Kuş Cenneti"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766211802,
+   "lat": 38.5076593,
+   "lon": 27.0458377,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "28"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13236324471,
+   "lat": 37.950663,
+   "lon": 27.3723099,
+   "tags": {
+    "amenity": "bicycle_parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087519,
+   "lat": 38.4674834,
+   "lon": 27.0793412,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Mavişehir"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087526,
+   "lat": 38.4552765,
+   "lon": 27.1203188,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Karşıyaka iskele"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8181675056,
+   "lat": 38.4496871,
+   "lon": 27.209301,
+   "tags": {
+    "amenity": "bicycle_parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13236324230,
+   "lat": 37.9480805,
+   "lon": 27.3690853,
+   "tags": {
+    "amenity": "bicycle_parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13299667001,
+   "lat": 38.4420601,
+   "lon": 27.1803601,
+   "tags": {
+    "amenity": "bicycle_parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087515,
+   "lat": 38.3789636,
+   "lon": 26.9013434,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Güzelbahçe Liman"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087527,
+   "lat": 38.460954,
+   "lon": 27.127738,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Alaybey Tersane Cafe"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12646733401,
+   "lat": 37.9492265,
+   "lon": 27.3633012,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "2"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8593435817,
+   "lat": 38.324504,
+   "lon": 27.1338872,
+   "tags": {
+    "amenity": "bicycle_parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8181673599,
+   "lat": 38.4505034,
+   "lon": 27.2118464,
+   "tags": {
+    "amenity": "bicycle_parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2205781412,
+   "lat": 38.4547334,
+   "lon": 27.1194072,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Karbis Rent a Bike"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9919017808,
+   "lat": 38.4802222,
+   "lon": 27.0773145,
+   "tags": {
+    "amenity": "bicycle_parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087541,
+   "lat": 38.4399489,
+   "lon": 27.147847,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Alsancak Garı",
+    "capacity": "12"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087539,
+   "lat": 38.429791,
+   "lon": 27.1423545,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Fuar Lozan",
+    "capacity": "15"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087525,
+   "lat": 38.4494794,
+   "lon": 27.1105868,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Karşıyaka Evlendirme Dairesi"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087532,
+   "lat": 38.4593074,
+   "lon": 27.1941092,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Cumhuriyet Parkı"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8592980617,
+   "lat": 38.4928673,
+   "lon": 27.0623127,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Çiğli Kasaplar Meydanı"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766233101,
+   "lat": 38.4991776,
+   "lon": 27.0531787,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "8"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087547,
+   "lat": 38.3846454,
+   "lon": 27.1798288,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Hasanağa Parkı 1"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766283501,
+   "lat": 38.4577102,
+   "lon": 27.1149226,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "10"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766209501,
+   "lat": 38.5601413,
+   "lon": 27.044124,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "28"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8592980020,
+   "lat": 38.4750193,
+   "lon": 27.074776,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Mavi Bahçe"
+   }
+  },
+  {
+   "type": "node",
+   "id": 4755241723,
+   "lat": 38.4653408,
+   "lon": 27.1852564,
+   "tags": {
+    "amenity": "bicycle_parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11269205869,
+   "lat": 38.3075331,
+   "lon": 26.3699982,
+   "tags": {
+    "amenity": "bicycle_parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087518,
+   "lat": 38.4877379,
+   "lon": 26.9607087,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Doğal Yaşam Parkı"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766295501,
+   "lat": 38.4607165,
+   "lon": 27.1217495,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "20"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087555,
+   "lat": 38.3966659,
+   "lon": 27.07057,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Fahrettin Altay"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766275601,
+   "lat": 38.4593264,
+   "lon": 27.1050757,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "48"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087553,
+   "lat": 38.3991685,
+   "lon": 27.0837053,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Göztepe Köprü"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766247901,
+   "lat": 38.4679938,
+   "lon": 27.0965598,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "12"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087531,
+   "lat": 38.4541803,
+   "lon": 27.1884437,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Fethi Sekin Parkı"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9383867406,
+   "lat": 38.3786512,
+   "lon": 26.8931361,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Güzelbahçe İskelesi"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766305801,
+   "lat": 38.4503994,
+   "lon": 27.1720937,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "10"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9383859423,
+   "lat": 38.297751,
+   "lon": 27.1749251,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Sarnıç Meydan"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13299666901,
+   "lat": 38.4373629,
+   "lon": 27.1807177,
+   "tags": {
+    "amenity": "bicycle_parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087537,
+   "lat": 38.424556,
+   "lon": 27.1433039,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Fuar Basmane",
+    "capacity": "15"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087542,
+   "lat": 38.442195,
+   "lon": 27.1432792,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Liman"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11425620971,
+   "lat": 38.2324709,
+   "lon": 27.9912211,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "park"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087557,
+   "lat": 38.406137,
+   "lon": 26.996162,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Sahilevleri 2"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087524,
+   "lat": 38.451179,
+   "lon": 27.1041119,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Yunuslar"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9383874613,
+   "lat": 38.3211289,
+   "lon": 27.1267553,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Gaziemir Meydan"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9919018286,
+   "lat": 38.4652041,
+   "lon": 27.0940978,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "5"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087521,
+   "lat": 38.4620938,
+   "lon": 27.085241,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Bostanlı Spor Tesisleri"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087538,
+   "lat": 38.427879,
+   "lon": 27.14175,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Fuar Montrö",
+    "capacity": "15"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087536,
+   "lat": 38.4451832,
+   "lon": 27.1707579,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Meles Rekreasyon Alanı"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766202901,
+   "lat": 38.7891992,
+   "lon": 26.9671045,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "12"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087540,
+   "lat": 38.433102,
+   "lon": 27.141135,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Plevne Bulvarı"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087546,
+   "lat": 38.4275173,
+   "lon": 27.1325844,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Pasaport İskele"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087520,
+   "lat": 38.4653762,
+   "lon": 27.0819092,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Mavişehir Balıkçı Barınağı"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087514,
+   "lat": 38.3843404,
+   "lon": 26.9229264,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Güzelbahçe Ahmet Piriştina Rekreasyon Alanı"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087523,
+   "lat": 38.45471,
+   "lon": 27.096761,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Bostanlı İskele"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766202401,
+   "lat": 38.7887559,
+   "lon": 26.9666056,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "12"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087554,
+   "lat": 38.4007144,
+   "lon": 27.0782348,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "A.A Saygun"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766296901,
+   "lat": 38.4649009,
+   "lon": 27.1290552,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "16"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087517,
+   "lat": 38.404845,
+   "lon": 27.058146,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "Bisim Merkez"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11512087556,
+   "lat": 38.4066894,
+   "lon": 27.0621103,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "name": "İnciraltı Kent Ormanı"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12766235901,
+   "lat": 38.4913334,
+   "lon": 27.0633718,
+   "tags": {
+    "amenity": "bicycle_parking",
+    "capacity": "12"
+   }
+  }
+ ]
+}

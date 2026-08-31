@@ -19,12 +19,13 @@ COPY middleware/ middleware/
 # Kopyalanmazsa BisimBolgeService açılışta dosya bulamaz: hizmet alanı da,
 # GBFS free_bike_status da üretilemez, yani BİSİM üretimde tamamen kaybolur.
 COPY data/ data/
-COPY bisim_cache.json .
 COPY parking_cache.json .
-# Kapasite anlık görüntüsü — BikeShareService.loadCapacityByRef bunu okur.
-# Kopyalanmazsa kapasite sessizce yalnızca OSM etiketinden gelir (çoğu
-# istasyonda o etiket yok) ve GBFS feed.i kapasitesiz istasyon yayınlar.
-COPY bisim_stations.json .
+# NOT: bisim_cache.json ve bisim_stations.json burada KOPYALANMIYOR, çünkü
+# artık yoklar. İkisi de BikeShareService'in girdisiydi; o servis BİSİM
+# sabit istasyonları kaldırılınca (2025-08) silindi. Bölge modeli verisini
+# data/ dizininden okur — yukarıdaki COPY data/ satırı.
+# Bu satırlar bir süre kalmıştı ve Docker build'i COPY adımında kırıyordu:
+# imaj derlenmeden hata verdiği için hiçbir testte görünmüyordu.
 # OSM bisiklet parkı yedeği (86 nokta). Overpass erişilemediğinde
 # /parking/bike-racks bunu servis eder.
 COPY bike_parking_cache.json .
@@ -37,11 +38,11 @@ RUN wget -q https://github.com/kitanajde/izmir-otp-files/releases/download/v1/ot
 # (bikes_allowed yaması) ve bisikletli aktarma tablosu içerir.
 RUN wget -q https://github.com/betulalpaslan/izmir-otp-files/releases/download/v2/graph.obj
 
-# Build sırasında Overpass'tan taze BİSİM verisi çekmeyi dene; başarısız olursa statik cache kalır
-RUN wget -q -O /tmp/bisim_fresh.json \
-      "https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5Bamenity%3Dbicycle_rental%5D%2838.2%2C26.8%2C38.6%2C27.5%29%3Bout%3B" \
-    && mv /tmp/bisim_fresh.json bisim_cache.json \
-    || true
+# NOT: Burada Overpass'tan amenity=bicycle_rental çeken bir adım vardı ve
+# sonucu bisim_cache.json'a yazıyordu. Kaldırıldı, çünkü o dosyayı okuyan
+# kimse kalmadı: BİSİM 2025-08'de sabit istasyonları kaldırdı, model bölge
+# tabanlı ve verisi data/ dizininden geliyor. Adım her build'de Overpass'a
+# gidip hiçbir işe yaramayan bir dosya üretiyordu.
 
 # Build sırasında İZELMAN'dan taze otopark verisi çekmeyi dene; başarısız olursa statik cache kalır
 RUN wget -q --timeout=20 -O /tmp/parking_fresh.json \

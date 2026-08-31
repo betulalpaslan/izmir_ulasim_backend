@@ -12,6 +12,13 @@ COPY start.sh .
 COPY routes/ routes/
 COPY services/ services/
 COPY middleware/ middleware/
+# BİSİM bölge modeli bu iki dosyadan üretilir ve İKİSİ DE ZORUNLU:
+#   bisim-bolgeler.json      → bırakma noktaları (yeşil "P" bonus alanları)
+#   bisiklet-yollari.geojson → hizmet alanı poligonu ve serbest bisikletlerin
+#                              örneklendiği koridor
+# Kopyalanmazsa BisimBolgeService açılışta dosya bulamaz: hizmet alanı da,
+# GBFS free_bike_status da üretilemez, yani BİSİM üretimde tamamen kaybolur.
+COPY data/ data/
 COPY bisim_cache.json .
 COPY parking_cache.json .
 # Kapasite anlık görüntüsü — BikeShareService.loadCapacityByRef bunu okur.
@@ -23,7 +30,12 @@ COPY bisim_stations.json .
 COPY bike_parking_cache.json .
 
 RUN wget -q https://github.com/kitanajde/izmir-otp-files/releases/download/v1/otp-shaded-2.8.1.jar
-RUN wget -q https://github.com/kitanajde/izmir-otp-files/releases/download/v1/graph.obj
+# graph.obj SÜRÜM ETİKETİYLE alınır, "en son" diye sabit bir URL ile değil.
+# Sebep: bu bir RUN katmanı ve Docker onu URL'e göre önbelleğe alır. Aynı
+# etiketin üstüne yeni dosya yüklenirse katman değişmediği için yeniden
+# indirilmez — hata verilmez, eski graph'la çalışılır. v2, bisiklet taşıma
+# (bikes_allowed yaması) ve bisikletli aktarma tablosu içerir.
+RUN wget -q https://github.com/betulalpaslan/izmir-otp-files/releases/download/v2/graph.obj
 
 # Build sırasında Overpass'tan taze BİSİM verisi çekmeyi dene; başarısız olursa statik cache kalır
 RUN wget -q -O /tmp/bisim_fresh.json \

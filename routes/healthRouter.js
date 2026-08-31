@@ -2,9 +2,10 @@ const express = require("express");
 const asyncHandler = require("../middleware/asyncHandler");
 const config = require("../config");
 const axios = require("axios");
-const bikeShare = require("../services/BikeShareService");
+const bisimBolge = require("../services/BisimBolgeService");
 const parking   = require("../services/ParkingService");
 const osmParking = require("../services/OsmParkingService");
+const istasyon  = require("../services/RayliIstasyonService");
 
 
 const router = express.Router();
@@ -36,9 +37,10 @@ router.get("/health", (req, res) => {
 //   degraded → servis cevap veriyor ama veri bayat/eksik (yukarıdaki 3 örnek)
 //   down     → OTP erişilemez; rota üretilemiyor  → HTTP 503
 router.get("/health/ready", asyncHandler(async (req, res) => {
-  const bike = bikeShare.getStatus();
+  const bike = bisimBolge.getStatus();
   const park = parking.getStatus();
   const osm  = osmParking.getStatus();
+  const ist  = istasyon.getStatus();
   const otp  = await checkOtp();
 
   const issues = [];
@@ -46,12 +48,21 @@ router.get("/health/ready", asyncHandler(async (req, res) => {
   if (otp.expired === true)                   issues.push("graph_expired");
   if (otp.daysRemaining != null && otp.daysRemaining >= 0 && otp.daysRemaining < 7)
                                               issues.push("graph_expiring_soon");
-  if (bike.source === "build-cache")          issues.push("bisim_build_cache");
-  if (bike.stale)                             issues.push("bisim_overpass_backoff");
-  if (bike.stations === 0)                    issues.push("bisim_no_stations");
+  if (bike.bolgeler === 0)                    issues.push("bisim_bolge_yok");
+  // OTP grafiğinde bölge var ama hepsi kapalıysa bisiklet rotası hiç üretilmez.
+  // Bu sessiz bozulma gerçekten yaşandı: 52 istasyon yüklüydü ve hepsi
+  // allowPickupNow:false idi, kimse fark etmedi. Artık ölçülüyor.
+  if (otp.reachable && otp.kiralamaBolge === 0)     issues.push("otp_kiralama_bolgesi_yok");
+  if (otp.reachable && otp.kiralamaAcik === 0 && otp.kiralamaBolge > 0)
+                                              issues.push("otp_kiralama_hepsi_kapali");
   if (park.source === "build-cache")          issues.push("parking_build_cache");
   if (park.source === "none")                 issues.push("parking_no_source");
   if (park.parkAndRide === 0)                 issues.push("parking_no_park_and_ride");
+  // İstasyon türlerinden biri tazelenemediğinde P+R sınıflandırması eksik
+  // kalır ve otopark sayısı SESSİZCE düşer — bir turda 91 istasyon yerine 36
+  // yüklendi, P+R 52'den 44'e indi, hiçbir yerde iz bırakmadı.
+  if (ist.tazelenemeyen?.length)              issues.push("istasyon_kismi");
+  if (ist.source === "none")                  issues.push("istasyon_yok");
   // OSM katmanları: henüz hiç çekilmemişse (source null) sorun sayılmaz —
   // ilgili profil seçilene kadar kimse istemez, tembel yüklenirler.
   if (osm.osmParking.source === "build-cache")     issues.push("osm_parking_build_cache");
@@ -64,7 +75,7 @@ router.get("/health/ready", asyncHandler(async (req, res) => {
     status,
     issues,
     uptimeSec: Math.floor((Date.now() - startedAt) / 1000),
-    checks: { otp, bisim: bike, parking: park, osm },
+    checks: { otp, bisim: bike, parking: park, osm, istasyon: ist },
     checkedAt: new Date().toISOString(),
   });
 }));
@@ -73,13 +84,17 @@ router.get("/health/ready", asyncHandler(async (req, res) => {
 // kapsadığını tek sorguda öğrenir. Timeout kısa: sağlık ucu yavaş olursa
 // izleme aracı zaman aşımını "servis öldü" diye raporlar.
 async function checkOtp() {
-  const query = `{ serviceTimeRange { start end } }`;
+  const query = `{
+    serviceTimeRange { start end }
+    vehicleRentalStations { allowPickupNow }
+  }`;
   try {
     const r = await axios.post(config.OTP_URL, { query }, { timeout: config.TIMEOUT.OTP_SAGLIK });
     if (r.data?.errors?.length) {
       return { reachable: true, graphqlError: true, detail: r.data.errors[0]?.message ?? null };
     }
     const range = r.data?.data?.serviceTimeRange || {};
+    const kiralama = r.data?.data?.vehicleRentalStations || [];
     const endMs = range.end ? range.end * 1000 : null;
     const toIso = (sec) => (sec ? new Date(sec * 1000).toISOString().slice(0, 10) : null);
     return {
@@ -88,6 +103,8 @@ async function checkOtp() {
       serviceEnd:   toIso(range.end),
       daysRemaining: endMs ? Math.floor((endMs - Date.now()) / 86400000) : null,
       expired: endMs ? endMs < Date.now() : null,
+      kiralamaBolge: kiralama.length,
+      kiralamaAcik:  kiralama.filter((k) => k.allowPickupNow).length,
     };
   } catch (err) {
     return { reachable: false, detail: err.message };

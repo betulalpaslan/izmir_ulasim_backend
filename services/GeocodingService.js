@@ -1,5 +1,6 @@
 const axios = require("axios");
 const config = require("../config");
+const stopIndex = require("./StopIndexService");
 
 // ─── Adres araması ─────────────────────────────────────────────────────
 // Photon önce, Nominatim yedek. İkisi de OSM verisi kullanır ama Photon
@@ -64,7 +65,12 @@ function asciiye(text) {
 // Sonuç türüne göre öncelik. Photon kendi "importance" sırasını verir ama
 // arama kutusunda bir yer adı ararken önce YERLEŞİM beklenir: "als" yazan
 // kullanıcı Alsancak semtini arıyordur, Alsancak Gar'ın çatı poligonunu değil.
-const TUR_ONCELIGI = { county: 0, city: 1, district: 2, locality: 3, street: 5, house: 6, other: 7 };
+//
+// Bu tablo artık YEDEK ölçüttür. Asıl sıralama ulaşım çevresine bakar
+// (StopIndexService): bir ulaşım uygulamasında noktanın değeri, çevresindeki
+// durak yoğunluğudur — tür etiketi bunun dolaylı ve hatalı bir tahminiydi.
+// Tür önceliği yalnızca durak indeksi hazır değilken (OTP kapalıyken) kullanılır.
+const TUR_ONCELIGI = { city: 0, district: 1, locality: 2, county: 3, street: 5, house: 6, other: 7 };
 
 function turSirasi(ozellik) {
   return TUR_ONCELIGI[ozellik?.type] ?? 4;
@@ -89,9 +95,21 @@ async function fetchPhoton(text) {
         _sira: turSirasi(p),
       };
     })
-    // Kararlı sıralama: aynı türdekiler Photon'un kendi sırasını korur.
-    .sort((a, b) => a._sira - b._sira)
-    .map(({ _sira, ...r }) => r);
+    // Sıralama: önce ULAŞIM ÇEVRESİ (en yakın durak + yakındaki durak sayısı),
+    // indeks hazır değilse tür önceliği. Ölçülen örnek — "Karşıyaka":
+    //   ilçe sınırı centroid'i  en yakın durak 188 m, 300 m içinde  2 durak
+    //   sahildeki merkez        en yakın durak  59 m, 300 m içinde 10 durak
+    // Kullanıcı ilkini seçtiğinde dağlık bir noktaya yönleniyor ve rota çıkmıyordu.
+    .map((r) => {
+      const skor = stopIndex.yakinlikSkoru(parseFloat(r.lat), parseFloat(r.lon));
+      return { ...r, _skor: skor };
+    })
+    .sort((a, b) => {
+      const ikisiDeOlculdu = a._skor != null && b._skor != null;
+      if (ikisiDeOlculdu && Math.abs(a._skor - b._skor) > 0.01) return a._skor - b._skor;
+      return a._sira - b._sira;   // ölçülemeyenlerde ve beraberlikte tür önceliği
+    })
+    .map(({ _sira, _skor, ...r }) => r);
 }
 
 async function fetchNominatim(text) {
@@ -130,6 +148,10 @@ async function searchAddress(text) {
   const anahtar = sorgu.toLocaleLowerCase("tr");
   const onbellek = cacheOku(anahtar);
   if (onbellek) return onbellek;
+
+  // Durak indeksi ilk aramada kurulur, sonra bellekte kalır. Hazır değilse
+  // sıralama tür önceliğine düşer — arama yine çalışır.
+  await stopIndex.yukle();
 
   let sonuc = [];
   try {

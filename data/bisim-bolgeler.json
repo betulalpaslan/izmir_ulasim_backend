@@ -1,0 +1,23 @@
+{
+  "surum": "2026-08-30",
+  "aciklama": "BİSİM bırakma bölgeleri (İzmirim Kart uygulamasındaki yeşil P alanları).",
+  "kaynak": [
+    "İzmirim Kart / BİSİM uygulaması harita ekranı (2026-08-30 ekran görüntüleri) — bölgelerin varlığı ve yaklaşık konumu",
+    "İzmir Açık Veri, 'Bisiklet Altyapı Haritası' GeoJSON (2023-08-18) — koridorların gerçek koordinatları",
+    "İBB duyurusu 2025-08-04 — sabit istasyon modelinin kaldırılması"
+  ],
+  "not": "Koordinatlar açık veri bisiklet yolu geometrilerinden alınmıştır; poligon sınırları uygulamadan piksel olarak okunamadığı için her bölge merkez + yarıçap ile temsil edilir. 'guven' alanı düşük olanlar uygulamayla karşılaştırılıp düzeltilmelidir.",
+  "birakmaNoktalari": [
+    { "id": "cigli-dogal-yasam",   "ad": "Çiğli Doğal Yaşam Parkı", "ilce": "Çiğli",       "lat": 38.48611, "lon": 27.00434, "yaricapM": 400, "guven": "orta" },
+    { "id": "mavisehir",           "ad": "Mavişehir",               "ilce": "Karşıyaka",   "lat": 38.46528, "lon": 27.07941, "yaricapM": 400, "guven": "yuksek" },
+    { "id": "bostanli-iskele",     "ad": "Bostanlı İskele",         "ilce": "Karşıyaka",   "lat": 38.45329, "lon": 27.09714, "yaricapM": 300, "guven": "yuksek" },
+    { "id": "karsiyaka-iskele",    "ad": "Karşıyaka İskele",        "ilce": "Karşıyaka",   "lat": 38.45530, "lon": 27.11220, "yaricapM": 300, "guven": "yuksek" },
+    { "id": "bayrakli-rekreasyon", "ad": "Bayraklı Rekreasyon",     "ilce": "Bayraklı",    "lat": 38.46053, "lon": 27.16373, "yaricapM": 400, "guven": "yuksek" },
+    { "id": "alsancak-kordon",     "ad": "Alsancak Kordon",         "ilce": "Konak",       "lat": 38.43463, "lon": 27.13767, "yaricapM": 400, "guven": "yuksek" },
+    { "id": "konak-iskele",        "ad": "Konak İskele",            "ilce": "Konak",       "lat": 38.41870, "lon": 27.12830, "yaricapM": 300, "guven": "yuksek" },
+    { "id": "balcova",             "ad": "Balçova Haydar Aliyev",   "ilce": "Balçova",     "lat": 38.40659, "lon": 27.05263, "yaricapM": 400, "guven": "yuksek" },
+    { "id": "narlidere",           "ad": "Narlıdere Sahilevleri",   "ilce": "Narlıdere",   "lat": 38.39566, "lon": 27.00071, "yaricapM": 400, "guven": "orta" },
+    { "id": "sigacik",             "ad": "Sığacık",                 "ilce": "Seferihisar", "lat": 38.19257, "lon": 26.82313, "yaricapM": 400, "guven": "orta" },
+    { "id": "bornova-merkez",      "ad": "Bornova Merkez",          "ilce": "Bornova",     "lat": 38.46800, "lon": 27.21500, "yaricapM": 400, "guven": "dusuk" }
+  ]
+}

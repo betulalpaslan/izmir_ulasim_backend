@@ -2,7 +2,7 @@ const express = require("express");
 const asyncHandler = require("../middleware/asyncHandler");
 const config = require("../config");
 const axios = require("axios");
-const { fetchParks, isParkAndRide, toOtpParking, toParkingStation } = require("../services/ParkingService");
+const { fetchParks, isParkAndRide, toOtpParking, toParkingStation, bisikletParkYerleri } = require("../services/ParkingService");
 
 
 const router = express.Router();
@@ -16,6 +16,14 @@ router.get("/feed", asyncHandler(async (req, res) => {
     .filter((p) => p.lat != null && p.lng != null)  // koordinatsız lot 0,0'a düşer
     .map(toOtpParking);
   res.json({ lots });
+}));
+
+// OTP'nin BICYCLE_PARK_API updater'ı buradan besleniyor. Gövde şeması
+// /feed ile aynı (ParkAPI), farkı OTP'nin bu lotları BİSİKLET yeri olarak
+// kaydetmesi — bkz. ParkingService.bisikletParkYerleri, oradaki ölçüm bu
+// ucun neden var olduğunu anlatıyor.
+router.get("/bike-feed", asyncHandler(async (req, res) => {
+  res.json({ lots: await bisikletParkYerleri() });
 }));
 
 router.get("/stations", asyncHandler(async (req, res) => {

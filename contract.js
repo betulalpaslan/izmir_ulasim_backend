@@ -25,16 +25,18 @@
 // dizideki her elemanın taşıması gereken anahtarlar.
 const UCLAR = {
   "GET /bisim/stations": {
-    zarf: "stations",
-    alanlar: ["id", "name", "active", "capacity", "bikes", "lat", "lon", "ref"],
-    ek: ["updatedAt"],
-    not: "bikes her zaman null — BİSİM'in anlık doluluğu 2025-07-23'ten beri yayınlanmıyor.",
+    zarf: "bolgeler",
+    alanlar: ["id", "ad", "ilce", "lat", "lon", "yaricapM", "guven"],
+    ek: ["model", "updatedAt"],
+    not: "BİSİM 2025-08'de sabit istasyonları kaldırdı; bu uç artık BÖLGE döndürür, istasyon değil. Bisiklet hizmet alanı içinde her yere bırakılabilir, bu bölgelerde bırakınca bonus verilir. 'yaricapM' bölgenin yaklaşık yarıçapı, 'guven' konumun ne kadar doğrulandığıdır (yuksek/orta/dusuk).",
   },
   "GET /parking/stations": {
     zarf: "stations",
     alanlar: ["id", "name", "lat", "lon", "type", "capacity", "free", "occupied",
-              "status", "isPaid", "nearMetro", "nearTrain", "nearTram", "provider"],
+              "status", "isPaid", "nearMetro", "nearTrain", "nearTram", "nearFerry",
+              "railDistanceM", "railName", "source", "provider"],
     ek: ["updatedAt"],
+    not: "Envanter (CKAN, 82 otopark) ile doluluk (İZELMAN, 14 otopark) birleşir. Sensörü olmayan otoparkta free/occupied NULL'dır — sıfır değil; 'source' hangi kaynaklardan geldiğini söyler (ckan | izelman | ckan+izelman). railDistanceM en yakın raylı/vapur istasyonuna ölçülen mesafedir, P+R kararı buna dayanır.",
   },
   "GET /parking/otp-lots": {
     zarf: "stations",
@@ -72,16 +74,44 @@ const UCLAR = {
 const OTP_PARKAPI = {
   yol: "GET /parking/feed",
   zarf: "lots",
-  alanlar: ["id", "name", "coords", "state", "total", "free"],
+  alanlar: ["id", "name", "coords", "state", "total"],
+  kosullu: ["free"],
   koordinat: ["lat", "lng"], // DİKKAT: burada lng, çünkü ParkAPI öyle ister
-  not: "state zorunludur: OTP null kontrolü yapmadan okur, eksikse updater düşer.",
+  not: "state zorunludur: OTP null kontrolü yapmadan okur, eksikse updater düşer. 'free' KOŞULLUDUR: yalnız doluluk gerçekten biliniyorsa gönderilir. Bilinmeyeni 0 yazmak OTP'ye 'bu otopark dolu' demektir ve otoparkı rotalamadan düşürür — kapasitesi bilinen ama sensörü olmayan 68 otopark böyle kaybolurdu.",
+};
+
+// Aynı ParkAPI gövdesi, farklı updater: OTP bunu BİSİKLET yeri olarak
+// kaydeder (sourceType: BICYCLE_PARK_API). `free` burada HİÇ gönderilmez —
+// doluluk araba yerlerinindir; taşınırsa dolu bir otopark bisiklete de
+// kapalı sayılır.
+const OTP_BIKE_PARKAPI = {
+  yol: "GET /parking/bike-feed",
+  zarf: "lots",
+  alanlar: ["id", "name", "coords", "state", "total"],
+  kosullu: [],
+  koordinat: ["lat", "lng"],
+  not: "İçerik: raylı sefer YAPILAN duraklar (OTP'nin kendi durak listesinden, 150 m kümelemeyle) + P+R otoparkları. Kaynak olarak İZULAŞ istasyon API'si KULLANILMAZ: o liste raylı seferi olmayan noktaları da istasyon sayıyor ve bisikletin metronun beriside park edilmesine yol açıyordu.",
 };
 
 const GBFS = {
   yollar: ["GET /bisim/gbfs", "GET /bisim/gbfs/system_information",
-           "GET /bisim/gbfs/station_information", "GET /bisim/gbfs/station_status"],
-  istasyonAlanlari: ["station_id", "name", "lat", "lon"],
-  not: "capacity İSTEĞE BAĞLIDIR ve bilinmiyorsa hiç gönderilmez — uydurma sayı yazılmaz.",
+           "GET /bisim/gbfs/station_information", "GET /bisim/gbfs/station_status",
+           "GET /bisim/gbfs/vehicle_types", "GET /bisim/gbfs/free_bike_status",
+           "GET /bisim/gbfs/geofencing_zones"],
+  istasyonAlanlari: ["station_id", "name", "lat", "lon", "capacity"],
+  serbestBisikletAlanlari: ["bike_id", "lat", "lon", "is_reserved", "is_disabled", "vehicle_type_id"],
+  aracTuruAlanlari: ["vehicle_type_id", "form_factor", "propulsion_type", "name", "return_constraint"],
+  bolgeGeometrisi: "MultiPolygon",
+  notlar: [
+    "geofencing_zones OTP'ye BIRAKMA kuralını verir: kuralında hiçbir yasak olmayan bölge OTP'nin iç modelinde 'işletme alanı'dır — dışına bırakılamaz, içinde her yere bırakılabilir.",
+    "Geometri MultiPolygon OLMALI. Polygon gönderilirse OTP ayrıştıramaz ve hata TÜM feed yüklemesini iptal eder; istasyon listesi de sessizce eski halinde kalır (ölçüldü).",
+    "properties.rules boş bırakılamaz: OTP 2.8.1 kuralları koşulsuz okur, null gelirse NullPointerException atar ve istasyon sayısı 0'a iner (ölçüldü).",
+    "station_information'daki capacity bölgede yuva olduğu anlamına gelmez; OTP alanı olmayan istasyonu kullanılamaz saydığı için gönderilen nominal bir değerdir. Kullanıcıya dönük /bisim/stations bu alanı içermez.",
+    "ttl OTP tarafından birebir uygulanır — uzun verilirse bölge değişikliği o süre boyunca alınmaz.",
+    "free_bike_status BİSİM'in dockless modelini taşır: serbest araç, geofencing bölgesinin İÇİNDE her yere bırakılabilir. Bu uç olmadan OTP ağı istasyonlu sanıyor ve kiralamayı ancak bir istasyonda bitirebiliyordu — ölçüldü, Konak → Alsancak'ta bisiklet istasyona bırakılıp kalan 1294 m yürünüyordu.",
+    "free_bike_status'teki koordinatlar tek tek bisikletlerin GERÇEK yeri değildir; canlı konum yayınlanmıyor. Gerçek bisiklet yolu geometrisi üzerinde 400 m'de bir örneklenmiş alma noktalarıdır ve bu yüzden kullanıcıya dönük uçlarda GÖSTERİLMEZLER.",
+  ],
+  otpUpdater: { geofencingZones: true, not: "Bu bayrak olmadan OTP geofencing_zones.json'u hiç okumaz." },
 };
 
 // Sağlık uçları izleme aracının sözleşmesidir; alan adları değişirse
@@ -92,4 +122,4 @@ const SAGLIK = {
   durumlar: ["ok", "degraded", "down"],
 };
 
-module.exports = { UCLAR, OTP_PARKAPI, GBFS, SAGLIK };
+module.exports = { UCLAR, OTP_PARKAPI, OTP_BIKE_PARKAPI, GBFS, SAGLIK };

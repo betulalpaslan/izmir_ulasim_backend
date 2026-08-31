@@ -1,7 +1,7 @@
 const express = require("express");
 const config = require("./config");
 const cors = require("cors");
-const { fetchParks } = require("./services/ParkingService");
+const { baslatYenileme } = require("./services/ParkingService");
 const healthRouter  = require("./routes/healthRouter");
 const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
 const routeRouter   = require("./routes/routeRouter");
@@ -31,8 +31,11 @@ app.listen(config.PORT, async () => {
   console.log(`BİSİM GBFS feed: http://localhost:${config.PORT}/bisim/gbfs`);
 
   console.log("Cache'ler önceden dolduruluyor...");
+  // İlk tur burada beklenir; sonrası arka planda döner. Otopark uçları bu
+  // andan itibaren ağ beklemeden yanıt verir — OTP'nin ParkAPI updater'ı 5
+  // saniyede vazgeçtiği için /parking/feed'in hızlı olması şart.
   try {
-    const parks = await fetchParks();
+    const parks = await baslatYenileme();
     console.log(`Otopark cache: ${parks.length} kayıt yüklendi`);
   } catch (err) {
     console.warn("Otopark cache doldurulamadı:", err.message);

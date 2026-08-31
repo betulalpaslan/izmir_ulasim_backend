@@ -1,14 +1,40 @@
 {
   "routingDefaults": {
-    "walkReluctance": 2.0,
     "transferPenalty": 300,
-    "walkBoardCost": 600,
     "waitReluctance": 1.0,
-    "bikeSpeed": 4.5,
-    "bikeReluctance": 1.5,
-    "carPark": {
-      "carParkTime": "5m",
-      "carParkCost": 120
+    "bicycle": {
+      "speed": 4.5,
+      "reluctance": 1.0,
+      "parking": {
+        "time": "2m",
+        "cost": 300
+      },
+      "rental": {
+        "pickupTime": "1m30s",
+        "pickupCost": 300,
+        "dropOffTime": "30s",
+        "dropOffCost": 60
+      },
+      "walk": {
+        "mountDismountTime": "30s",
+        "mountDismountCost": 100
+      }
+    },
+    "walk": {
+      "reluctance": 2.0,
+      "boardCost": 600
+    },
+    "car": {
+      "parking": {
+        "time": "5m",
+        "cost": 120
+      }
+    },
+    "accessEgress": {
+      "maxStopCount": 2000,
+      "maxDurationForMode": {
+        "BIKE": "30m"
+      }
     }
   },
   "updaters": [
@@ -18,14 +44,27 @@
       "sourceType": "PARK_API",
       "frequency": "PT1M",
       "url": "http://localhost:3000/parking/feed",
-      "tags": ["park_and_ride"]
+      "tags": [
+        "park_and_ride"
+      ]
+    },
+    {
+      "type": "VEHICLE_PARKING",
+      "feedId": "izmir-bike-pr",
+      "sourceType": "BICYCLE_PARK_API",
+      "frequency": "PT5M",
+      "url": "http://localhost:3000/parking/bike-feed",
+      "tags": [
+        "bike_and_ride"
+      ]
     },
     {
       "type": "VEHICLE_RENTAL",
       "network": "bisim-izmir",
       "sourceType": "GBFS",
       "frequency": "PT1M",
-      "url": "http://localhost:3000/bisim/gbfs.json"
+      "url": "http://localhost:3000/bisim/gbfs.json",
+      "geofencingZones": true
     }
   ]
 }

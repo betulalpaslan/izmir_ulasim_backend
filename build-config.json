@@ -1,0 +1,22 @@
+{
+  "osmDefaults": {
+    "timeZone": "Europe/Istanbul"
+  },
+  "transitServiceStart": "-P1Y",
+  "transitServiceEnd": "P3Y",
+  "staticBikeParkAndRide": true,
+  "staticParkAndRide": true,
+  "transferRequests": [
+    {
+      "modes": "WALK"
+    },
+    {
+      "modes": "BICYCLE"
+    }
+  ],
+  "transferParametersForMode": {
+    "BIKE": {
+      "maxTransferDuration": "8m"
+    }
+  }
+}

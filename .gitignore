@@ -11,9 +11,13 @@ npm-debug.log*
 otp-shaded-*.jar
 graph.obj
 
-# NOT: bisim_cache.json ve parking_cache.json BİLEREK dahil edilir.
-# Bunlar runtime cache DEĞİL, dış kaynak (Overpass / İZELMAN) çökünce
-# okunan disk yedekleridir — kod yalnızca okur, hiç yazmaz.
+# NOT: bisim_cache.json, parking_cache.json ve istasyon_cache.json BİLEREK
+# dahil edilir. Bunlar dış kaynak (Overpass / CKAN / openapi) çökünce okunan
+# disk yedekleridir; depoda bir tohum sürüm durur ki soğuk başlangıçta bile
+# otopark listesi boş olmasın.
+# parking_cache.json ve istasyon_cache.json'ı servis başarılı her turda
+# ÜSTÜNE YAZAR (yedek tazelensin diye) — yani çalışan bir kurulumda bu iki
+# dosya git'te değişmiş görünebilir, bu beklenen durumdur.
 # Aynı şekilde bisim_stations.json kapasite anlık görüntüsüdür.
 
 # Elle tutulan yedekler artık gereksiz — geçmiş git'te.

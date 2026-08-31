@@ -1,0 +1,32 @@
+{
+  "aciklama": "Rotalama davranışı için regresyon senaryoları. Elle tek tek ölçmek yerine tek komutla tüm matris koşulur; 'biri düzelirken diğeri bozuluyor' sorununu görünür kılar.",
+  "varsayilanKalkis": "2026-08-31T08:00:00+03:00",
+  "kalkisNotu": "Pazartesi 08:00 sabit. Gece saatlerinde toplu taşıma çalışmadığı için 'şimdi' ile koşmak sonuçları anlamsız kılar.",
+  "noktalar": {
+    "konak":      { "ad": "Konak Meydanı",   "lat": 38.4187, "lon": 27.1283 },
+    "karsiyaka":  { "ad": "Karşıyaka İskele", "lat": 38.4553, "lon": 27.1122 },
+    "bornova":    { "ad": "Bornova Merkez",   "lat": 38.4700, "lon": 27.2200 },
+    "alsancak":   { "ad": "Alsancak Garı",    "lat": 38.4399, "lon": 27.1478 },
+    "balcova":    { "ad": "Balçova",          "lat": 38.3900, "lon": 27.0400 },
+    "bostanli":   { "ad": "Bostanlı İskele",  "lat": 38.4533, "lon": 27.0971 },
+    "gaziemir":   { "ad": "Gaziemir",         "lat": 38.3200, "lon": 27.1400 },
+    "buca":       { "ad": "Buca",             "lat": 38.3800, "lon": 27.2100 }
+  },
+  "rotalar": [
+    { "id": "korfez-karsi",   "from": "konak",     "to": "karsiyaka", "tip": "körfezin iki yakası, ikisi de BİSİM alanında" },
+    { "id": "merkez-dogu",    "from": "konak",     "to": "bornova",   "tip": "doğuya iç hat, BİSİM alanı dışına çıkar" },
+    { "id": "sahil-bati",     "from": "alsancak",  "to": "balcova",   "tip": "sahil koridoru boyunca batıya" },
+    { "id": "kuzey-merkez",   "from": "bostanli",  "to": "konak",     "tip": "kuzey sahilden merkeze" },
+    { "id": "cevre-merkez",   "from": "gaziemir",  "to": "konak",     "tip": "çeperden merkeze, BİSİM alanı dışından başlar" },
+    { "id": "cevre-cevre",    "from": "buca",      "to": "karsiyaka", "tip": "çeperden çepere, uzun ve aktarmalı" },
+    { "id": "kisa-mesafe",    "from": "konak",     "to": "alsancak",  "tip": "kısa mesafe — modların gereksiz devreye girip girmediğini gösterir" }
+  ],
+  "modlar": [
+    { "id": "transit",       "profile": "transit" },
+    { "id": "bisiklet",      "profile": "bicycle" },
+    { "id": "bisim",         "profile": "bicycle", "bikeType": "RENT" },
+    { "id": "bisiklet-park", "profile": "bicycle", "bikeType": "PARK" },
+    { "id": "araba",         "profile": "car" },
+    { "id": "park-and-ride", "profile": "park_and_ride" }
+  ]
+}

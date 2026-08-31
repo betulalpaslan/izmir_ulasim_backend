@@ -1,0 +1,168 @@
+{
+  "aciklama": "Rota kalitesi regresyon senaryoları. Birim test değildir: ayakta bir OTP + backend ister ve 'saçma güzergâh' üretilip üretilmediğini ölçer.",
+  "zaman": "2026-08-31T08:00:00+03:00",
+  "zamanNotu": "Pazartesi 08:00 — sabah zirvesi. Gece sorulursa toplu taşıma çalışmadığı için her mod boş döner ve senaryolar anlamını yitirir.",
+  "noktalar": {
+    "konak": {
+      "ad": "Konak İskele",
+      "lat": 38.4187,
+      "lon": 27.1283
+    },
+    "alsancak": {
+      "ad": "Alsancak Garı",
+      "lat": 38.4399,
+      "lon": 27.1478
+    },
+    "karsiyaka": {
+      "ad": "Karşıyaka İskele",
+      "lat": 38.4553,
+      "lon": 27.1122
+    },
+    "bostanli": {
+      "ad": "Bostanlı İskele",
+      "lat": 38.4533,
+      "lon": 27.0971
+    },
+    "cigli": {
+      "ad": "Çiğli Ataşehir",
+      "lat": 38.4861,
+      "lon": 27.0043
+    },
+    "bornova": {
+      "ad": "Bornova Metro",
+      "lat": 38.47,
+      "lon": 27.22
+    },
+    "balcova": {
+      "ad": "Balçova",
+      "lat": 38.39,
+      "lon": 27.04
+    },
+    "narlidere": {
+      "ad": "Narlıdere",
+      "lat": 38.3957,
+      "lon": 27.0007
+    },
+    "buca": {
+      "ad": "Buca",
+      "lat": 38.39,
+      "lon": 27.175
+    },
+    "gaziemir": {
+      "ad": "Gaziemir",
+      "lat": 38.3197,
+      "lon": 27.1428
+    },
+    "ucyol": {
+      "ad": "Üçyol",
+      "lat": 38.4088,
+      "lon": 27.1354
+    },
+    "narlidere_ic": {
+      "ad": "2. İnönü, Narlıdere",
+      "lat": 38.3882608,
+      "lon": 27.0133902
+    },
+    "cigli_ic": {
+      "ad": "6792/1. Sk, Aydınlıkevler, Çiğli",
+      "lat": 38.4902601,
+      "lon": 27.0806429
+    }
+  },
+  "modlar": {
+    "transit": {
+      "profile": "transit",
+      "bikeType": null,
+      "etiket": "Toplu taşıma"
+    },
+    "bicycle_park": {
+      "profile": "bicycle",
+      "bikeType": "PARK",
+      "etiket": "Bisikletim + Aktarma"
+    },
+    "bicycle_rent": {
+      "profile": "bicycle",
+      "bikeType": "RENT",
+      "etiket": "BİSİM + Aktarma"
+    },
+    "park_and_ride": {
+      "profile": "park_and_ride",
+      "bikeType": null,
+      "etiket": "Park & Ride"
+    },
+    "car": {
+      "profile": "car",
+      "bikeType": null,
+      "etiket": "Araba"
+    }
+  },
+  "senaryolar": [
+    {
+      "id": "korfez-karsi",
+      "from": "konak",
+      "to": "karsiyaka",
+      "not": "Körfezin iki yakası. BİSİM koridoru boyunca; klasik multimodal vaka."
+    },
+    {
+      "id": "merkez-dogu",
+      "from": "konak",
+      "to": "bornova",
+      "not": "Metro ekseni. Bisiklet burada işe yaramıyordu (282 m vakası)."
+    },
+    {
+      "id": "sahil-guneybati",
+      "from": "alsancak",
+      "to": "balcova",
+      "not": "Sahil koridoru; 6 m'lik bisiklet bacağı burada çıktı."
+    },
+    {
+      "id": "kuzey-merkez",
+      "from": "bostanli",
+      "to": "konak",
+      "not": "Vapur kaldırıldığı için kara yolu; BİSİM iki uçta da var."
+    },
+    {
+      "id": "uzak-kuzey",
+      "from": "cigli",
+      "to": "konak",
+      "not": "Uzun mesafe. Araba/P+R'nin anlamlı olması beklenir."
+    },
+    {
+      "id": "kuzey-dogu",
+      "from": "karsiyaka",
+      "to": "bornova",
+      "not": "İZBAN + metro aktarması."
+    },
+    {
+      "id": "guneybati-merkez",
+      "from": "narlidere",
+      "to": "alsancak",
+      "not": "BİSİM koridorunun batı ucu."
+    },
+    {
+      "id": "guney-merkez",
+      "from": "buca",
+      "to": "alsancak",
+      "not": "BİSİM bölgesi DIŞINDAN başlar — kiralama çıkmamalı."
+    },
+    {
+      "id": "uzak-guney",
+      "from": "gaziemir",
+      "to": "konak",
+      "not": "Havalimanı hattı; P+R için tipik vaka."
+    },
+    {
+      "id": "kisa-merkez",
+      "from": "konak",
+      "to": "ucyol",
+      "not": "Çok kısa (~1.5 km). Her aracın 'gereksiz' olduğu sınır vakası."
+    },
+    {
+      "id": "narlidere-cigli",
+      "from": "narlidere_ic",
+      "to": "cigli_ic",
+      "not": "Çapraz şehir, iki ucu da raylı hattın dışında. İki arıza buradan çıktı: bisiklet metronun 3 km beriside park edilip araya otobüs sokuluyordu (bisiklet park feed'i), ve her modda 19-28 dk'lık tek yürüyüş bacakları geçiyordu (20 dk tavanı)."
+    }
+  ],
+  "modlarNotu": "Tek başına bisiklet modu ('bicycle', bikeType yok) kaldırıldı: iki bisiklet modu da artık aktarmalı ve backend hiçbirinde 'direct' istemiyor (bkz. services/OtpService.js buildModesInput)."
+}

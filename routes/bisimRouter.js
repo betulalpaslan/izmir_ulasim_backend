@@ -2,21 +2,24 @@ const express = require("express");
 const asyncHandler = require("../middleware/asyncHandler");
 const config = require("../config");
 const axios = require("axios");
-const { fetchBisim, getRawStations, mapToStation } = require("../services/BikeShareService");
+const bolgeService = require("../services/BisimBolgeService");
 
+
+// Bölgede yuva yoktur; bu değer yalnız OTP'nin "kullanılabilir" saymasını
+// sağlamak için gönderilen nominal bir sayıdır, gerçek bir ölçüm değildir.
+const BOLGE_NOMINAL_KAPASITE = 20;
 
 const router = express.Router();
 
-router.get("/stations", asyncHandler(async (req, res) => {
-  try {
-    const data = await fetchBisim();
-    const stations = getRawStations(data).map(mapToStation);
-    res.json({ stations, updatedAt: new Date().toISOString() });
-  } catch (err) {
-    console.error("BİSİM fetch hatası:", err.message);
-    res.status(502).json({ error: "BİSİM istasyon verisi alınamıyor." });
-  }
-}));
+// Kullanıcıya dönük uç: bisikletin bırakılabileceği bölgeler.
+// Eskiden istasyon listesiydi; BİSİM 2025-08'de sabit istasyonları kaldırdı.
+router.get(["/stations", "/bolgeler"], (req, res) => {
+  res.json({
+    model: "bolge",
+    bolgeler: bolgeService.birakmaNoktalari(),
+    updatedAt: new Date().toISOString(),
+  });
+});
 
 router.get(["/gbfs", "/gbfs.json"], (req, res) => {
   const proto = req.get("x-forwarded-proto") || req.protocol;
@@ -28,9 +31,12 @@ router.get(["/gbfs", "/gbfs.json"], (req, res) => {
     data: {
       en: {
         feeds: [
-          { name: "system_information", url: `${base}/gbfs/system_information` },
+          { name: "system_information",  url: `${base}/gbfs/system_information` },
           { name: "station_information", url: `${base}/gbfs/station_information` },
           { name: "station_status",      url: `${base}/gbfs/station_status` },
+          { name: "vehicle_types",       url: `${base}/gbfs/vehicle_types` },
+          { name: "free_bike_status",    url: `${base}/gbfs/free_bike_status` },
+          { name: "geofencing_zones",    url: `${base}/gbfs/geofencing_zones` },
         ],
       },
     },
@@ -54,55 +60,114 @@ router.get("/gbfs/system_information", (req, res) => {
   });
 });
 
-router.get("/gbfs/station_information", asyncHandler(async (req, res) => {
-  try {
-    const data = await fetchBisim();
-    // Kapasite mapToStation tarafından zenginleştirilir (OSM etiketi +
-    // 2025-07 anlık görüntüsü). Bilinmiyorsa alan hiç gönderilmez —
-    // GBFS'te capacity isteğe bağlıdır ve uydurma "10" yazmak yanıltıcıdır.
-    const stations = getRawStations(data).map(mapToStation).map((st) => {
-      const out = {
-        station_id: String(st.id),
-        name:       st.name,
-        lat:        st.lat,
-        lon:        st.lon,
-      };
-      if (st.capacity) out.capacity = st.capacity;
-      return out;
-    });
-    console.log(`GBFS station_information: ${stations.length} istasyon gönderildi`);
-    res.json({ last_updated: Math.floor(Date.now() / 1000), ttl: 3600, version: "2.3", data: { stations } });
-  } catch {
-    res.status(502).json({ error: "BİSİM istasyon verisi alınamıyor." });
-  }
-}));
+// Bölgeler OTP'ye istasyon olarak sunulur: OTP'nin rotalama modeli bir
+// alma/bırakma NOKTASI bekler, bölgenin merkezi o noktadır. Alanı ise
+// geofencing_zones ile verilir.
+router.get("/gbfs/station_information", (req, res) => {
+  const stations = bolgeService.birakmaNoktalari().map((b) => ({
+    station_id: b.id,
+    name:       b.ad,
+    lat:        b.lat,
+    lon:        b.lon,
+    // Bölgede yuva yoktur; kapasite kavramı da yoktur. Ama OTP alanı
+    // olmayan istasyonu kullanılamaz sayıyor (ölçüldü), bu yüzden nominal
+    // bir değer gönderilir. Kullanıcıya dönük /bisim/stations bu alanı
+    // içermez — uydurma sayı ekranda görünmez.
+    capacity:   BOLGE_NOMINAL_KAPASITE,
+  }));
+  res.json({ last_updated: Math.floor(Date.now() / 1000), ttl: 3600, version: "2.3", data: { stations } });
+});
 
-router.get("/gbfs/station_status", asyncHandler(async (req, res) => {
-  try {
-    const data = await fetchBisim();
-    // BİSİM'in gerçek zamanlı verisi 2025-07-23'ten beri hiçbir kaynakta
-    // yayınlanmıyor (belediye API'si yanıt vermiyor, açık veri portalından
-    // kaldırıldı, BİSİM'in kendi harita servisi kapalı).
-    //
-    // is_renting/is_returning bilerek false bırakılmıştır: true yazmak OTP'ye
-    // "bu istasyondan bisiklet alınabilir" demek olur ve kullanıcı elinde
-    // olmayan bir bisiklete göre planlanmış rota görür. Doluluk uydurmak
-    // yerine kiralama rotası üretilmemesi tercih edilmiştir.
-    // Canlı kaynak yeniden yayına girerse burası gerçek sayılarla doldurulur.
-    const stations = getRawStations(data).map((e) => ({
-      station_id:          String(e.id),
-      num_bikes_available: 0,
-      num_docks_available: 0,
-      is_installed:        true,
-      is_renting:          false,
-      is_returning:        false,
-      last_reported:       Math.floor(Date.now() / 1000),
-    }));
-    res.json({ last_updated: Math.floor(Date.now() / 1000), ttl: 60, version: "2.3", data: { stations } });
-  } catch {
-    res.status(502).json({ error: "BİSİM istasyon verisi alınamıyor." });
-  }
-}));
+router.get("/gbfs/station_status", (req, res) => {
+  // Bölge modelinde "doluluk" yoktur: bisiklet serbest dolaşır, bölge yalnız
+  // bırakmaya izin verilen alandır. Dolayısıyla eskisi gibi canlı veri
+  // beklemeye gerek yok — bölgenin açık olması işletmecinin tanımıdır.
+  //
+  // Eski model burada is_renting:false gönderiyordu (canlı doluluk yok diye).
+  // Sonucu ölçüldü: OTP'deki 52 istasyonun tamamı allowPickupNow:false idi,
+  // yani hiçbir rotada bisiklet çıkmıyordu.
+  const stations = bolgeService.birakmaNoktalari().map((b) => ({
+    station_id:          b.id,
+    num_bikes_available: BOLGE_NOMINAL_KAPASITE,
+    num_docks_available: BOLGE_NOMINAL_KAPASITE,
+    is_installed:        true,
+    is_renting:          true,
+    is_returning:        true,
+    last_reported:       Math.floor(Date.now() / 1000),
+  }));
+  res.json({ last_updated: Math.floor(Date.now() / 1000), ttl: 60, version: "2.3", data: { stations } });
+});
+
+// Araç türü. İKİ işi var:
+//
+//  1. AD. Bu feed olmadan OTP serbest araçlara kendi yer tutucusunu veriyor
+//     ve rota kartında bacak "Default vehicle type" diye görünüyordu.
+//  2. return_constraint: "free_floating" — dockless kuralın GBFS'teki
+//     açık beyanı. Bırakma serbestliği geofencing bölgesinden de çıkıyor,
+//     ama iki kaynak birbirini doğruluyor; biri kaybolursa diğeri tutar.
+const ARAC_TURU = "bisim-bisiklet";
+
+router.get("/gbfs/vehicle_types", (req, res) => {
+  res.json({
+    last_updated: Math.floor(Date.now() / 1000),
+    ttl: 3600,
+    version: "2.3",
+    data: {
+      vehicle_types: [{
+        vehicle_type_id:   ARAC_TURU,
+        form_factor:       "bicycle",
+        propulsion_type:   "human",
+        name:              "BİSİM bisikleti",
+        return_constraint: "free_floating",
+      }],
+    },
+  });
+});
+
+// Serbest dolaşan bisikletler. BİSİM'in gerçek modeli budur: bisiklet
+// istasyona bağlı değil, hizmet alanı içinde her yere bırakılır.
+//
+// Bu uç OLMADAN OTP ağı istasyonlu sanıyor ve kiralamayı ancak bir
+// istasyonda bitirebiliyordu. Ölçüm — Konak İskele → Alsancak Garı:
+//   BİSİKLET 12 dk (Konak İskele → Alsancak Kordon) + YÜRÜME 17 dk / 1294 m
+// Yani bisiklet en yakın istasyona bırakılıp kalan 1.3 km yürünüyordu.
+//
+// Konumların nereden geldiği ve neyin varsayım olduğu
+// BisimBolgeService.serbestBisikletler'de yazılı — özeti: canlı bisiklet
+// konumu yayınlanmıyor, noktalar GERÇEK bisiklet yolu geometrisi üzerinde
+// 400 m'de bir örnekleniyor. Bu yüzden kullanıcıya gösterilmezler.
+router.get("/gbfs/free_bike_status", (req, res) => {
+  const simdi = Math.floor(Date.now() / 1000);
+  res.json({
+    last_updated: simdi,
+    ttl: 60,
+    version: "2.3",
+    data: {
+      bikes: bolgeService.serbestBisikletler().map((b) => ({
+        bike_id:         b.bike_id,
+        lat:             b.lat,
+        lon:             b.lon,
+        vehicle_type_id: ARAC_TURU,
+        // OTP her ikisini de okur; true olan araç rotalamaya girmez.
+        is_reserved:   false,
+        is_disabled:   false,
+        last_reported: simdi,
+      })),
+    },
+  });
+});
+
+router.get("/gbfs/geofencing_zones", (req, res) => {
+  res.json({
+    last_updated: Math.floor(Date.now() / 1000),
+    // ttl'i OTP birebir uyguluyor: 3600 verildiğinde bölge değişikliği bir
+    // saat boyunca alınmıyordu. Bölgeler seyrek değişse de bu kadar uzun
+    // körlük istenmez.
+    ttl: 300,
+    version: "2.3",
+    data: { geofencing_zones: bolgeService.geofencingZones() },
+  });
+});
 
 // OTP'nin BİSİM istasyonlarını yükleyip yüklemediğini kontrol eder
 router.get("/otp-check", asyncHandler(async (req, res) => {

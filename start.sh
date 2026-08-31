@@ -38,7 +38,18 @@ if [ "$i" -ge "$HAZIRLIK_TIMEOUT" ]; then
 fi
 
 echo "OTP başlatılıyor..."
-java -Xmx1g -jar otp-shaded-2.8.1.jar --load . --port "$OTP_PORT" &
+# Yığın boyutu. 1g yetmiyor: bisikletli aktarma tablosu graph'a eklendiğinde
+# dosya 73 MB'tan 84 MB'a çıktı ve yükleme sırasında tepe bellek kullanımı
+# dosya boyutunun katı oluyor. Ortamdan geçersiz kılınabilir ki daha büyük
+# bir plana geçildiğinde bu dosya düzenlenmesin.
+#
+# NOT: aktarma tablosu bir ara 264 MB'a çıkmıştı; sebebi bisiklet aktarma
+# yarıçapının varsayılan 30 dakika (~8 km) olmasıydı. build-config.json'daki
+# transferParametersForMode.BIKE.maxTransferDuration = 8m onu 84 MB'a indirdi.
+# Oradaki enum WALK/BIKE'tır — "BICYCLE" yazılırsa OTP ayarı SESSİZCE yok
+# sayar (yalnız bir WARN satırı düşer) ve graph yine şişer.
+OTP_HEAP=${OTP_HEAP:-2g}
+java -Xmx"$OTP_HEAP" -jar otp-shaded-2.8.1.jar --load . --port "$OTP_PORT" &
 OTP_PID=$!
 
 # Gözcü. Eskiden son satır "exec java ..." idi: Node çökerse konteyneri

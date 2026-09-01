@@ -1,0 +1,6 @@
+# Kabuk betikleri konteynerde /bin/sh ile çalışıyor; CRLF ile checkout
+# edilirlerse `set -eu\r` satırı "illegal option" verip başlatmayı düşürüyor.
+# Windows'ta düzenlense bile depoda ve checkout'ta LF kalsınlar.
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.bash      text eol=lf

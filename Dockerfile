@@ -30,7 +30,7 @@ COPY parking_cache.json .
 # /parking/bike-racks bunu servis eder.
 COPY bike_parking_cache.json .
 
-RUN wget -q https://github.com/kitanajde/izmir-otp-files/releases/download/v1/otp-shaded-2.8.1.jar
+RUN wget -q https://github.com/betulalpaslan/izmir-otp-files/releases/download/v1/otp-shaded-2.8.1.jar
 # graph.obj SÜRÜM ETİKETİYLE alınır, "en son" diye sabit bir URL ile değil.
 # Sebep: bu bir RUN katmanı ve Docker onu URL'e göre önbelleğe alır. Aynı
 # etiketin üstüne yeni dosya yüklenirse katman değişmediği için yeniden

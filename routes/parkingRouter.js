@@ -26,14 +26,28 @@ router.get("/bike-feed", asyncHandler(async (req, res) => {
   res.json({ lots: await bisikletParkYerleri() });
 }));
 
+// Frontend harita katmanı. İKİ FARKLI SORUYA cevap veriyor ve küme ona göre
+// değişiyor:
+//
+//   VARSAYILAN (P+R modu) → isParkAndRide süzgecinden geçen 52 otopark.
+//     Orada rota GERÇEKTEN bu otoparklardan birine park ediyor; haritadaki
+//     liste OTP'ye beslenen listeyle aynı olmalı, yoksa kullanıcı rotanın hiç
+//     uğramadığı bir otoparkı görüp "neden burayı seçmedi" diyor.
+//
+//   ?kapsam=tumu (düz araba modu) → envanterin tamamı, 82 otopark.
+//     Düz sürüşte rota hiçbir yere park etmiyor; otopark yalnız bilgi,
+//     "varınca nereye bırakabilirim". O soruda "raylı sisteme yakın mı"
+//     ölçütü anlamsız — yalnız o yüzden elenen 30 otopark araba için gayet
+//     geçerli park yeri.
 router.get("/stations", asyncHandler(async (req, res) => {
+  const tumu = req.query.kapsam === "tumu";
   try {
     const all = await fetchParks();
     const stations = all
-      .filter(isParkAndRide)
+      .filter((p) => (tumu ? true : isParkAndRide(p)))
       .filter((p) => p.lat && p.lng)
       .map(toParkingStation);
-    res.json({ stations, updatedAt: new Date().toISOString() });
+    res.json({ stations, kapsam: tumu ? "tumu" : "park-and-ride", updatedAt: new Date().toISOString() });
   } catch (err) {
     console.error("Otopark stations hatası:", err.message);
     res.status(502).json({ error: "İZELMAN otopark servisine ulaşılamıyor." });

@@ -26,6 +26,59 @@ const { fetchIstasyonlar, enYakinIstasyon, haversine } = require("./RayliIstasyo
 // listeyi anında döner, yenileme arka planda çalışır.
 
 const BUILD_CACHE_FILE = path.join(__dirname, "..", "parking_cache.json");
+
+// ─── Dış çağrı: geçici hatada tekrar dene ──────────────────────────────
+//
+// Ölçülen olay: konteynerde art arda beş kez
+//   "Otopark doluluğu alınamadı: getaddrinfo EAI_AGAIN openapi.izmir.bel.tr"
+// Adres çözümlemesi düşüyordu, uç değil — aynı anda dışarıdan yapılan
+// istekler HTTP 200 dönüyordu (25–39 sn, yavaş ama sağlam) ve alan adı
+// 0,02 sn'de çözülüyordu. EAI_AGAIN adı gereği GEÇİCİ bir hatadır,
+// "tekrar dene" demektir; ama kod tek deneme yapıp 5 dakikalık tura
+// bırakıyordu. Anlık bir DNS titremesi böylece 5 dakikalık veri kaybına
+// dönüşüyordu.
+//
+// `family: 4` — alan adının AAAA (IPv6) kaydı YOK. Node çift yığın
+// çözümlemede AAAA sorgusunu da bekler; resolver o sorguyu yanıtsız
+// bırakırsa sonuç EAI_AGAIN olur. IPv4'e sabitlemek o sorguyu hiç
+// yaptırmıyor.
+//
+// Yalnız GEÇİCİ hatalar tekrarlanır. HTTP 4xx/5xx tekrarlanmaz: sunucu
+// yanıt vermiştir, ısrar etmek yükü artırmaktan başka işe yaramaz.
+const GECICI_HATALAR = new Set([
+  "EAI_AGAIN",     // DNS geçici olarak çözemedi
+  "ETIMEDOUT",
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "ENOTFOUND",     // resolver ısınmamış olabilir
+  "EPIPE",
+]);
+
+const TEKRAR_SAYISI  = 3;
+const TEKRAR_BEKLEME = 1500;   // ms; her denemede ikiye katlanır
+
+function bekle(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function istekle(url, ayarlar = {}) {
+  let sonHata;
+  for (let deneme = 1; deneme <= TEKRAR_SAYISI; deneme++) {
+    try {
+      return await axios.get(url, { family: 4, ...ayarlar });
+    } catch (err) {
+      sonHata = err;
+      if (!GECICI_HATALAR.has(err.code) || deneme === TEKRAR_SAYISI) throw err;
+      const gecikme = TEKRAR_BEKLEME * 2 ** (deneme - 1);
+      console.warn(
+        `${url} — ${err.code}, ${gecikme} ms sonra yeniden deneniyor ` +
+        `(${deneme}/${TEKRAR_SAYISI - 1})`
+      );
+      await bekle(gecikme);
+    }
+  }
+  throw sonHata;
+}
 const ESLESME_YARICAP_M = 150;   // aynı otoparkın iki kaynaktaki konumu arası azami sapma
 
 let envanter = null;             // CKAN kaynaklı taban liste
@@ -63,7 +116,7 @@ function ckanKaydiniCevir(r, tip, resourceId) {
 }
 
 async function birKaynagiCek({ resourceId, tip }) {
-  const res = await axios.get(config.CKAN_DATASTORE_URL, {
+  const res = await istekle(config.CKAN_DATASTORE_URL, {
     params: { resource_id: resourceId, limit: 1000 },
     timeout: config.TIMEOUT.CKAN,
   });
@@ -131,7 +184,7 @@ function diskYedeginiOku() {
 
 async function dolulugaYenile() {
   try {
-    const res = await axios.get(config.IZELMAN_PARK_URL, { timeout: config.TIMEOUT.IZELMAN });
+    const res = await istekle(config.IZELMAN_PARK_URL, { timeout: config.TIMEOUT.IZELMAN });
     const ham = Array.isArray(res.data) ? res.data : [];
     if (!ham.length) throw new Error("boş yanıt");
     doluluk = new Map(ham.filter((p) => p.ufid).map((p) => [p.ufid, p]));
@@ -141,7 +194,9 @@ async function dolulugaYenile() {
     // Doluluk kaybı envanteri düşürmez: otoparklar listelenmeye devam eder,
     // yalnız boş yer sayısı null olur.
     if (!doluluk.size) dolulukSource = "none";
-    console.warn("Otopark doluluğu alınamadı:", err.message);
+    // Hata KODU da yazılıyor: "alınamadı" tek başına zaman aşımı mı, DNS mi,
+    // 500 mü ayırt ettirmiyordu ve teşhis logdan yapılamıyordu.
+    console.warn(`Otopark doluluğu alınamadı [${err.code || "?"}]:`, err.message);
   }
 }
 

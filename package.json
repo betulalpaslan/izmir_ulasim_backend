@@ -21,6 +21,11 @@
     "collectCoverageFrom": [
       "services/**/*.js",
       "middleware/**/*.js"
+    ],
+    "globalSetup": "<rootDir>/__tests__/senaryoVerisi.js",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/__tests__/senaryoVerisi.js"
     ]
   }
 }

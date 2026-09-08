@@ -12,35 +12,27 @@
 
 const fs = require("fs");
 const path = require("path");
+const { pathToFileURL } = require("url");
 const config = require("../config");
 
 const TANIM = JSON.parse(fs.readFileSync(path.join(__dirname, "senaryolar.json"), "utf8"));
 const API = `http://localhost:${config.PORT ?? 3000}/get-route`;
 
-// EŞİK UYGULAMADAN OKUNUR, BURADA YENİDEN YAZILMAZ.
-//
-// Bu satırlar bir kez `config.BISIKLET_ANLAMLI_MIN_M` diyordu. O sabit
-// config.js'ten kaldırılınca ifade `undefined["RENT"]` oldu ve kural her
-// çağrıldığında attı: 42 senaryonun 14'ü (bütün bisim + bisiklet-park
-// satırları) "HATA" basmaya başladı.
-//
-// Süit bunu gizlemiyordu — özet satırı "hata 14" yazıyordu. Sorun, aynı
-// özetin YANINDA "ihlal 0" demesiydi: kural hiç koşamadığı için ihlal de
-// sayamıyor, matrisin üçte biri denetlenmeden "0 ihlal" tablosuna
-// dönüşüyordu. Nitekim kural onarılınca altından 2 gerçek ihlal çıktı.
-// Bir regresyon kalkanında hatalı satır, geçmiş satır sayılmamalı.
-//
-// Kaynak artık uygulamanın kendi tablosu (utils/routeScoring.js
-// BIKE_LEG_MIN). Anahtar da elle eşlenmiyor: mod tanımındaki
-// profile+bikeType, uygulamanın KENDİ çözücüsünden geçiriliyor. Böylece
-// eşik de, eşiğin hangi moda ait olduğu da tek yerde tanımlı kalır.
-require(path.join(__dirname, "..", "senaryo", "routeScoring.bundle.js"));
-const RS = globalThis.RS;
-if (!RS?.BIKE_LEG_MIN) {
-  console.error("Puanlama paketi yüklenemedi ya da eski: senaryo/routeScoring.bundle.js");
-  console.error("Yeniden üretmek için: node senaryo/derle.js");
-  process.exit(2);
+// Eşik ve kaynak uygulamadan okunur, burada yeniden yazılmaz.
+// Eskiden config.BISIKLET_ANLAMLI_MIN_M vardı; sabit kaldırılınca kural her
+// çağrıda attı ve 42 senaryonun 14'ü denetlenmeden "0 ihlal" sayıldı.
+// Dinamik import: bu dosya CommonJS, statik `import` kullanamaz.
+const UTILS = process.env.MOBIL_UTILS
+  || path.join(__dirname, "..", "..", "izmir_ulasim", "utils");
+const modul = (ad) => import(pathToFileURL(path.join(UTILS, ad)).href);
+
+let RS = null;
+async function puanlamayiYukle() {
+  const [p, a, g] = await Promise.all(
+    ["routeScoring.js", "routeInstructions.js", "geo.js"].map(modul));
+  RS = { ...p, ...a, ...g };
 }
+
 const bisikletEsigi = (mod) => RS.BIKE_LEG_MIN[RS.resolveProfileKey(mod.profile, mod.bikeType)];
 
 const arg = (ad) => (process.argv.find((a) => a.startsWith(`--${ad}=`)) || "").split("=")[1];
@@ -64,13 +56,9 @@ const transitVar = (it) => it.legs.some((l) => !OZEL.includes(l.mode));
 const enUzunYuruyus = (it) => Math.max(0, ...it.legs.filter((l) => l.mode === "WALK").map((l) => l.distance || 0));
 
 // ─── Kurallar ──────────────────────────────────────────────────────────
-// Her kural bir güzergâhı inceler ve ihlal varsa metin döndürür.
-// Eşikler ölçümle belirlenmiştir; gerekçeleri config.js ve routeScoring.js'te.
-// DİKKAT — kurallar TEK BİR güzergâhı değil, backend'in o senaryo için
-// döndürdüğü LİSTEYİ denetler. Sebebi ilk koşuda görüldü: listede anlamsız
-// bir güzergâhın BULUNMASI hata değil (uygulamadaki rankItineraries onu
-// eliyor); hata, listede kullanılabilir HİÇBİR güzergâh olmamasıdır.
-// Backend'in verdiği garanti budur, denetlenen de bu olmalı.
+// Kurallar TEK BİR güzergâhı değil, o senaryo için dönen LİSTEYİ denetler:
+// listede anlamsız güzergâh bulunması hata değil (rankItineraries eliyor),
+// hata listede kullanılabilir hiçbir güzergâh olmamasıdır.
 const KURALLAR = [
   {
     ad: "vapur yok",
@@ -126,6 +114,13 @@ async function planla(s) {
 }
 
 (async () => {
+  try {
+    await puanlamayiYukle();
+  } catch (err) {
+    console.error("Puanlama kaynağı okunamadı:", UTILS);
+    console.error("MOBIL_UTILS ortam değişkeniyle yolu verebilirsin. Sebep:", err.message);
+    process.exit(2);
+  }
   const rotaSuz = arg("rota"), modSuz = arg("mod");
   const satirlar = [];
 

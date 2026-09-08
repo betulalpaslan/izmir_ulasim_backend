@@ -23,14 +23,9 @@ function buildTransitPreferences(modes) {
 function buildModesInput(profile, bikeType, transitPrefs) {
   if (profile === "bicycle") {
     if (bikeType === "RENT") {
-      // WALK, BICYCLE_RENTAL'ın yanında ZORUNLU. Kaldırmayı denemek OTP'den
-      // şu hatayı aldı ve mod hiç sonuç döndürmedi:
-      //   "For the time being, BIKE_RENTAL needs to be combined with WALK
-      //    mode for the same leg."
-      // Kiralık bisiklete yürüyerek gidilip yürüyerek bırakıldığı için OTP
-      // ikisini tek bacak sayıyor. Bunun bedeli, bisiklet İÇERMEYEN
-      // güzergâhların da dönmesi; onları uygulama katmanı eliyor
-      // (hooks/useRouteSearch.js, profileKey === "bicycle_rent" süzgeci).
+      // WALK zorunlu: OTP "BIKE_RENTAL needs to be combined with WALK"
+      // diyor. Bedeli, bisikletsiz güzergâhların da dönmesi — onları
+      // useRouteSearch'teki bicycle_rent süzgeci eliyor.
       return {
         transit: { access: ["BICYCLE_RENTAL", "WALK"], egress: ["BICYCLE_RENTAL", "WALK"], transfer: ["WALK"], transit: transitPrefs }
       };
@@ -56,23 +51,13 @@ function buildModesInput(profile, bikeType, transitPrefs) {
   };
 }
 
-// Kendi bisikletiyle iki AYRI güzergâh tipi mümkün ve OTP bunları tek
-// sorguda kabul etmiyor:
-//   BICYCLE:bisikleti YANINA AL, transite onunla bin
-//   BICYCLE_PARKING:bisikleti istasyonda bırak, yürüyerek devam et
-// İkisini aynı erişim listesine koymak denendi, OTP reddediyor:
-//   "Bicycle can't be combined with other modes for the same leg:
-//    [BIKE, BIKE_TO_PARK]"
-// Bu yüzden iki sorgu atılır ve sonuçlar birleştirilir; hangisi daha iyiyse
-// puanlama katmanı öne alır (izmir_ulasim/utils/routeScoring.js).
-
-// Bisikletle transite binmek İzmir'de mümkün: metro, tramvay ve
-// İZBAN bisiklet taşımaya izin veriyor. OTP bunu YALNIZ GTFS'te
-// trips.bikes_allowed=1 olan seferlerde üretir; feed'de o alan operatöre
-// göre değiştirildi (tools/gtfs-bisiklet-değisikligi.js). değişiklik uygulanmadan
-// derlenmiş bir graph'ta bu sorgu sessizce boş döner — hata verilmez,
-// seçenek hiç üretilmez.
-// Kaynaklar ve ölçüm: docs/API.md, "GTFS bisiklet taşıma  değişikliği".
+// Kendi bisikletiyle iki ayrı güzergâh tipi var (yanına al / istasyonda
+// bırak) ve OTP ikisini tek sorguda kabul etmiyor; iki sorgu atılıp sonuçlar
+// birleştirilir.
+//
+// Bisikleti transite bindirmek yalnız GTFS'te trips.bikes_allowed=1 olan
+// seferlerde üretilir; yama uygulanmamış bir graph'ta bu sorgu SESSİZCE boş
+// döner (bkz. tools/gtfs-bisiklet-degisikligi.js).
 function buildModesInputs(profile, bikeType, transitPrefs) {
   if (profile === "bicycle" && bikeType !== "RENT") {
     return [
@@ -153,13 +138,8 @@ async function planRoute({ fromLat, fromLon, toLat, toLon, profile, modes, bikeT
         // OTP kiralık bisikleti de "BICYCLE" diye bildirir; kiralık olduğu
         // yalnız bacağın uçlarındaki araç/istasyon alanından anlaşılır.
   
-        // İKİ ALAN DA BAKILMALI. BİSİM dockless modele geçince (bkz.
-        // BisimBolgeService.serbestBisikletler) istasyon değil SERBEST ARAÇ
-        // döndürülüyor ve o durumda `vehicleRentalStation` NULL geliyor,
-        // araç `rentalVehicle` alanında. Yalnız istasyona bakıldığında
-        // etiketleme sessizce başarısız oluyordu: bacak "BICYCLE" kalıyor,
-        // uygulamanın BİSİM süzgeci (mode === "BICYCLE_RENTAL") hepsini
-        // eliyor ve mod yine boş görünüyordu.
+        // İki alana da bakılmalı: BİSİM dockless olduğu için istasyon değil
+        // serbest araç dönüyor, o durumda vehicleRentalStation null.
         const kiralik = (u) => u?.vehicleRentalStation || u?.rentalVehicle;
         if (leg.mode === "BICYCLE" && (kiralik(leg.from) || kiralik(leg.to))) {
           return { ...leg, mode: "BICYCLE_RENTAL" };

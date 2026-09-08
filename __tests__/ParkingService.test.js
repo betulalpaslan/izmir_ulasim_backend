@@ -75,11 +75,6 @@ describe("toOtpParking — OTP ParkAPI sözleşmesi", () => {
     expect(out.free).toBe(3);
   });
 
-  // DAVRANIŞ DEĞİŞTİ. Önceden doluluk bilinmediğinde free ve total 0 yazılıyordu
-  // ve otopark "sıfır kapasiteli" bildiriliyordu. OTP bunu "dolu" diye okuyup
-  // otoparkta park etmeyi hiç denemez; kapasitesi bilinen ama sensörü olmayan
-  // 68 otopark rotalamadan böyle düşerdi. Artık kapasite envanterden gelir ve
-  // free HİÇ GÖNDERİLMEZ — OTP alanı olmayanı "gerçek zamanlı veri yok" sayar.
   test("doluluk bilinmiyorsa free gönderilmez, total envanter kapasitesidir", () => {
     const out = toOtpParking(envanterLot);
     expect(out.total).toBe(1170);
@@ -120,8 +115,6 @@ describe("acikMi — çalışma saatinden açık/kapalı", () => {
     expect(acikMi({ openingHours: { sunday: "07:00 – 22:00" } }, new Date(2026, 7, 30, 4, 0))).toBe(false);
   });
 
-  // Bilinmeyeni kapalı saymak otoparkı tamamen görünmez kılar; açık saymak
-  // yalnız gereksiz önerir. İkisinden az zararlısı seçildi.
   test("saat bilinmiyorsa açık kabul edilir", () => {
     expect(acikMi({})).toBe(true);
   });
@@ -132,9 +125,7 @@ describe("isParkAndRide", () => {
     expect(isParkAndRide({ type: "OffStreet" })).toBe(true);
   });
 
-  // Asıl ölçüt bu. Eskiden yalnız İZELMAN'ın `poi` bayraklarına bakılıyordu;
-  // o bayraklar sensörlü 14 kayıtta var, envanterin kalan 68'inde yok — yani
-  // kural veri kaynağının kapsamına göre sonuç veriyordu.
+
   test("yol kenarı otoparkı istasyona yakınsa P+R sayılır", () => {
     expect(isParkAndRide({ type: "OnStreet", rayliMesafeM: 250 })).toBe(true);
     expect(isParkAndRide({ type: "OnStreet", rayliMesafeM: 400 })).toBe(true);
@@ -245,9 +236,6 @@ describe("isimSkoru — iki kaynağın aynı adı farklı yazması", () => {
 describe("bisikletParkYerleri", () => {
   const otpYanit = (stops) => ({ data: { data: { stops } } });
 
-  // Raylı durak listesi modül içinde 24 saat önbelleklenir (konumlar graph
-  // ömrü boyunca sabit). Testler arasında sıfırlanmazsa ikinci testin mock'u
-  // hiç kullanılmaz ve birincinin sonucu ölçülür — bu bir kez oldu.
   beforeEach(() => { jest.clearAllMocks(); rayliDuraklariUnut(); });
 
   // Kaynak İZULAŞ istasyon API'si DEĞİL, OTP'nin kendi durak listesi.

@@ -20,25 +20,11 @@ router.get("/feed", asyncHandler(async (req, res) => {
 
 // OTP'nin BICYCLE_PARK_API updater'ı buradan besleniyor. Gövde şeması
 // /feed ile aynı (ParkAPI), farkı OTP'nin bu lotları BİSİKLET yeri olarak
-// kaydetmesi — bkz. ParkingService.bisikletParkYerleri, oradaki ölçüm bu
-// ucun neden var olduğunu anlatıyor.
+// kaydetmesi — bkz. ParkingService.bisikletParkYerleri, oradaki ölçüm bu ucun neden var olduğunu anlatıyor.
 router.get("/bike-feed", asyncHandler(async (req, res) => {
   res.json({ lots: await bisikletParkYerleri() });
 }));
 
-// Frontend harita katmanı. İKİ FARKLI SORUYA cevap veriyor ve küme ona göre
-// değişiyor:
-//
-//   VARSAYILAN (P+R modu) → isParkAndRide süzgecinden geçen 52 otopark.
-//     Orada rota GERÇEKTEN bu otoparklardan birine park ediyor; haritadaki
-//     liste OTP'ye beslenen listeyle aynı olmalı, yoksa kullanıcı rotanın hiç
-//     uğramadığı bir otoparkı görüp "neden burayı seçmedi" diyor.
-//
-//   ?kapsam=tumu (düz araba modu) → envanterin tamamı, 82 otopark.
-//     Düz sürüşte rota hiçbir yere park etmiyor; otopark yalnız bilgi,
-//     "varınca nereye bırakabilirim". O soruda "raylı sisteme yakın mı"
-//     ölçütü anlamsız — yalnız o yüzden elenen 30 otopark araba için gayet
-//     geçerli park yeri.
 router.get("/stations", asyncHandler(async (req, res) => {
   const tumu = req.query.kapsam === "tumu";
   try {
@@ -56,10 +42,7 @@ router.get("/stations", asyncHandler(async (req, res) => {
 
 // OTP'nin routing için kullandığı lotlar — doluluk doğrudan İZELMAN'dan
 router.get("/otp-lots", asyncHandler(async (req, res) => {
-  // DİKKAT: şemada tekil "vehicleParking(id: String!)" zorunlu argüman ister;
-  // liste sorgusu çoğul "vehicleParkings". Tekil hâli argümansız çağrıldığında
-  // GraphQL hata döndürür ve alan null gelir — bu uç nokta bu yüzden OTP'de
-  // otopark olsa bile hep boş liste dönüyordu.
+
   const query = `{
     vehicleParkings {
       vehicleParkingId
@@ -82,34 +65,19 @@ router.get("/otp-lots", asyncHandler(async (req, res) => {
       fetchParks(),
     ]);
 
-    // GraphQL hataları sessizce yutulmamalı: boş liste ile "OTP'de veri yok"
-    // ayırt edilemiyordu.
+    // GraphQL hataları sessizce yutulmamalı: boş liste ile "OTP'de veri yok" ayırt edilemiyordu.
     if (otpRes.data?.errors?.length) {
       console.error("OTP vehicleParkings GraphQL hatası:", JSON.stringify(otpRes.data.errors));
       return res.status(502).json({ error: "OTP GraphQL hatası", details: otpRes.data.errors });
     }
     const lots = otpRes.data?.data?.vehicleParkings || [];
 
-    // İZELMAN canlı doluluk verisini ufid'e göre indeksle.
-    // OTP id'si "<feedId>:<ufid>" biçiminde gelir; eşleşme ufid üzerinden
-    // yapılır. OSM'den gelen park yerlerinin id'si "OSM:OsmNode/..."
-    // biçimindedir ve hiçbir İZELMAN kaydıyla eşleşmez — onlarda doluluk
-    // null kalır, doğrusu da budur (OSM'de doluluk verisi yoktur).
+ 
     const izelmanMap = {};
     for (const p of izelmanParks) {
       izelmanMap[p.ufid] = p;
     }
 
-    // İki süzgeç:
-    //   ?tag=park_and_ride       → yalnızca o etiketi taşıyanlar (İZELMAN lotları)
-    //   ?vehicle=bicycle|car     → OTP'nin o araç için KULLANABİLECEĞİ tüm yerler
-    // vehicle süzgeci tercih edilir: harita katmanı böylece rotanın gerçekten
-    // değerlendirdiği yerleri gösterir (OSM bisiklet parkları dahil), yalnızca
-    // İZELMAN lotlarını değil.
-    //
-    // 2026-08 ölçümü: graph'ta 110 park yeri var — 98'i OSM'den, 6'sı
-    // İZELMAN (izmir-pr). ?vehicle=bicycle 87 gerçek OSM bisiklet parkı
-    // döndürür.
     const tagFilter = req.query.tag;
     const vehicle = req.query.vehicle;
 

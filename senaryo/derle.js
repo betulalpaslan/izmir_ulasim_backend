@@ -34,6 +34,13 @@ const WEB_FRONTEND = process.env.WEB_FRONTEND
 const HEDEFLER = [
   path.join(__dirname, "routeScoring.bundle.js"),
   path.join(KAYNAK, "..", "routeScoring.bundle.js"),
+  // izmir_ulasim/web/index.html paketi KENDİ KLASÖRÜNDEN yüklüyor
+  // (<script src="routeScoring.bundle.js">, yol HTML'e göre çözülür).
+  // Depo kökündeki kopya o sayfaya hiç ulaşmıyordu: oradaki dosya elle
+  // kopyalanmıştı ve derlendikçe geride kaldı — sayfa aylarca kaldırılmış
+  // kurallarla puanladı. Aynı hata daha önce multimodal_web'de yaşandı,
+  // bu satır onun ikizidir.
+  path.join(KAYNAK, "..", "web", "routeScoring.bundle.js"),
   path.join(WEB_FRONTEND, "routeScoring.bundle.js"),
 ].filter((h) => fs.existsSync(path.dirname(h)));
 
@@ -56,6 +63,7 @@ const ADLAR = [
   "YURUYUS_BACAK_TAVANI_SN", "BISIKLET_ASGARI_PAY", "MODE_STYLE",
   "NON_TRANSIT_MODES", "resolveProfileKey", "calcLegDistanceMeters",
   "rankItineraries", "selectCandidates", "buildRouteResult", "getLegInstruction",
+  "guzergahZinciri",
   "CANDIDATE_DEFS", "ADAY_OLCULERI", "MAX_ROUTES", "calcCarbonGrams", "candidateKey",
   "calcJourneyFare", "ONERI_TOLERANSI", "oneriSinirinaUydur", "ayniHattiTekilleştir",
   "decodePolyline",

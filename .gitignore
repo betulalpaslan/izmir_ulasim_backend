@@ -26,3 +26,10 @@ graph.obj
 
 # OSM otopark yedeği build sırasında Overpass.tan üretilir (bkz. Dockerfile).
 osm_parking_cache.json
+
+# Markdown dokümanlar git'e girmez — tek istisna README.md.
+# DİKKAT: docs/API.md bu kurala takılıyor. O dosya contract.js'in insan
+# okuru için yazılmış karşılığıdır; depodan çıkınca sözleşme yalnız kodda
+# kalır. Kasten böyle isteniyor.
+*.md
+!README.md

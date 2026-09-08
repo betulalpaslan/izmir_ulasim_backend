@@ -2,17 +2,8 @@ jest.mock("axios");
 const request = require("supertest");
 const { UCLAR, OTP_PARKAPI, OTP_BIKE_PARKAPI, GBFS, SAGLIK } = require("../contract");
 
-// axios modül seviyesinde TUTULMAZ: her testten önce jest.resetModules()
-// çalışıyor (servislerin modül içi cache'leri temiz başlasın diye) ve
-// router'lar o sırada YENİ bir axios örneği alıyor. Modül seviyesindeki
-// referans mock'lanınca router'ların gördüğü örnek mock'suz kalıyordu.
-let axios;
 
-// Sözleşme testleri: uçlar contract.js'te yazılı alan adlarını gerçekten
-// üretiyor mu? Bir alan yeniden adlandırıldığında hata BURADA çıksın —
-// uygulamanın sessizce boş liste göstermesiyle değil.
-//
-// Dış çağrılar mock'lu: bu testler ağa çıkmaz, yalnız gövde biçimini ölçer.
+let axios;
 
 const izelmanLot = {
   ufid: "NEDAP-TR-IZM-034", name: "34 Sabancı", lat: 38.41, lng: 27.12,
@@ -45,8 +36,6 @@ const otpVehicleParking = {
   availability: { carSpaces: 16, bicycleSpaces: null },
 };
 
-// Overpass GET, İZELMAN GET, Photon GET — hepsi axios.get.
-// URL'e bakıp doğru gövdeyi döndürür.
 function axiosGetYonlendir(url) {
   if (url.includes("overpass")) {
     if (url.includes("bicycle_rental")) {
@@ -57,8 +46,7 @@ function axiosGetYonlendir(url) {
     }
     return Promise.resolve({ data: { elements: [{ type: "way", id: 3, center: { lat: 38.44, lon: 27.16 }, tags: { name: "Konak Otopark", parking: "underground", fee: "yes", capacity: "250" } }] } });
   }
-  // Otopark verisi iki kaynaktan gelir; ikisi de mock'lanmalı yoksa servis
-  // disk yedeğine düşer ve test gerçek dosyaya bağlı hale gelir.
+
   if (url.includes("acikveri.bizizmir.com")) {
     return Promise.resolve({ data: { success: true, result: { records: [ckanKaydi] } } });
   }
@@ -84,7 +72,6 @@ beforeEach(() => {
     data: { data: { vehicleParkings: [otpVehicleParking], serviceTimeRange: { start: 1745700000, end: 1830000000 } } },
   });
 
-  // server.js listen çağırır; test için router'ları ayrı bir app'e bağlarız.
   const express = require("express");
   app = express();
   app.use(express.json());
@@ -99,7 +86,7 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
-// Zarf + eleman alanlarını tek yerde doğrular.
+
 async function sozlesmeyiDogrula(yol, tanim) {
   const res = await request(app).get(yol).expect(200);
   expect(res.body).toHaveProperty(tanim.zarf);
@@ -123,9 +110,7 @@ describe("uygulamanın tükettiği uçlar", () => {
     expect(b).not.toHaveProperty("capacity");
   });
 
-  // Otopark uçları ağı İSTEK YOLUNDA beklemez; liste arka plan turunda dolar.
-  // Test o turu açıkça çalıştırır — çağrılmazsa servis disk yedeğine düşer ve
-  // test mock'lanmış veriyi değil, depodaki gerçek dosyayı ölçerdi.
+  
   const otoparkTuruBekle = () => require("../services/ParkingService").yenile();
 
   test("GET /parking/stations envanter ile doluluğu birleştirir", async () => {
@@ -233,9 +218,7 @@ describe("OTP'nin dayattığı gövdeler", () => {
     expect(res.body.bolgeler.length).toBeLessThan(50);   // 165 alma noktası değil
   });
 
-  // ── Aşağıdaki üçü, ölçülerek bulunmuş SESSİZ arızaları bekler. Üçü de
-  // hata log'u üretmeden rotalardan bisikleti tamamen kaldırıyordu.
-
+ 
   // 1) is_renting:false gönderildiğinde OTP istasyonu kullanılamaz sayar.
   // Eski model canlı doluluk yok diye false gönderiyordu; sonuç, grafikte 52
   // istasyon vardı ve hiçbiri açık değildi, hiçbir rotada bisiklet çıkmadı.
@@ -271,11 +254,6 @@ describe("OTP'nin dayattığı gövdeler", () => {
     expect(kurallar[0].ride_through_allowed).toBe(true);
   });
 
-  // Discovery'de listelenmeyen alt feed'i OTP hiç istemez ve o feed'in
-  // taşıdığı kural sessizce kaybolur. İki kez yaşandı: geofencing_zones
-  // listelenmediğinde bırakma kısıtı, free_bike_status listelenmediğinde
-  // dockless model kayboldu (ikincisinde bisiklet istasyona bırakılıp
-  // kalan 1294 m yürünüyordu).
   test("GBFS discovery sözleşmedeki tüm alt feed'leri listeler", async () => {
     const res = await request(app).get("/bisim/gbfs").expect(200);
     const adlar = res.body.data.en.feeds.map((f) => f.name);

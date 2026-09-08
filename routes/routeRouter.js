@@ -30,10 +30,7 @@ router.post("/get-route", asyncHandler(async (req, res) => {
   }
 }));
 
-// Graph'ın hangi tarih aralığı için veri içerdiğini gösterir.
-// GTFS calendar.txt pencereleri dar tutulduğu için (ESHOT tipik olarak ~2 ay)
-// graph süresi dolduğunda toplu taşıma rotaları sessizce kaybolur —
-// bu uç nokta "ne zaman yeniden build almalıyım" sorusunu yanıtlar.
+
 
 router.get("/otp-status", asyncHandler(async (req, res) => {
   const query = `{

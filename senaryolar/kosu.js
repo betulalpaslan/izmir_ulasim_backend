@@ -17,6 +17,32 @@ const config = require("../config");
 const TANIM = JSON.parse(fs.readFileSync(path.join(__dirname, "senaryolar.json"), "utf8"));
 const API = `http://localhost:${config.PORT ?? 3000}/get-route`;
 
+// EŞİK UYGULAMADAN OKUNUR, BURADA YENİDEN YAZILMAZ.
+//
+// Bu satırlar bir kez `config.BISIKLET_ANLAMLI_MIN_M` diyordu. O sabit
+// config.js'ten kaldırılınca ifade `undefined["RENT"]` oldu ve kural her
+// çağrıldığında attı: 42 senaryonun 14'ü (bütün bisim + bisiklet-park
+// satırları) "HATA" basmaya başladı.
+//
+// Süit bunu gizlemiyordu — özet satırı "hata 14" yazıyordu. Sorun, aynı
+// özetin YANINDA "ihlal 0" demesiydi: kural hiç koşamadığı için ihlal de
+// sayamıyor, matrisin üçte biri denetlenmeden "0 ihlal" tablosuna
+// dönüşüyordu. Nitekim kural onarılınca altından 2 gerçek ihlal çıktı.
+// Bir regresyon kalkanında hatalı satır, geçmiş satır sayılmamalı.
+//
+// Kaynak artık uygulamanın kendi tablosu (utils/routeScoring.js
+// BIKE_LEG_MIN). Anahtar da elle eşlenmiyor: mod tanımındaki
+// profile+bikeType, uygulamanın KENDİ çözücüsünden geçiriliyor. Böylece
+// eşik de, eşiğin hangi moda ait olduğu da tek yerde tanımlı kalır.
+require(path.join(__dirname, "..", "senaryo", "routeScoring.bundle.js"));
+const RS = globalThis.RS;
+if (!RS?.BIKE_LEG_MIN) {
+  console.error("Puanlama paketi yüklenemedi ya da eski: senaryo/routeScoring.bundle.js");
+  console.error("Yeniden üretmek için: node senaryo/derle.js");
+  process.exit(2);
+}
+const bisikletEsigi = (mod) => RS.BIKE_LEG_MIN[RS.resolveProfileKey(mod.profile, mod.bikeType)];
+
 const arg = (ad) => (process.argv.find((a) => a.startsWith(`--${ad}=`)) || "").split("=")[1];
 const JSON_CIKTI = process.argv.includes("--json");
 
@@ -57,7 +83,7 @@ const KURALLAR = [
     modlar: ["bisim", "bisiklet-park"],
     denetle: (its, s) => {
       if (s.yedek) return null;                       // bisikletsiz yedek zaten devrede
-      const esik = config.BISIKLET_ANLAMLI_MIN_M[s.mod.bikeType];
+      const esik = bisikletEsigi(s.mod);
       const enUzun = Math.max(0, ...its.filter(transitVar).map((it) => mesafe(it, BISIKLET)));
       if (enUzun === 0) return null;                  // hiç bisiklet önerilmemiş, ayrı durum
       return enUzun < esik ? `en uzun bisiklet ${Math.round(enUzun)} m < ${esik} m, yedek de devrede değil` : null;

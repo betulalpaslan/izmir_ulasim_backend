@@ -6,9 +6,7 @@ describe("toOsmParking", () => {
     expect(out).toEqual({ id: 1, name: "Konak Otopark", lat: 38.42, lon: 27.14, type: "underground", fee: true, capacity: 250 });
   });
 
-  // way'lerin kendi lat/lon'u yoktur; Overpass `out center` ile merkez verir.
-  // Bu okunmazsa way'ler koordinatsız kalır ve süzgeçte elenirdi — yani
-  // katlı otoparkların yarısı haritadan kaybolurdu.
+
   test("way'de koordinat center'dan alınır", () => {
     const out = toOsmParking({ id: 2, center: { lat: 38.43, lon: 27.15 }, tags: { parking: "multi-storey" } });
     expect(out.lat).toBe(38.43);

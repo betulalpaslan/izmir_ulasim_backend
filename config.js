@@ -1,12 +1,3 @@
-// Tek yapılandırma noktası.
-//
-// Buradan önce OTP_URL beş ayrı dosyada aynı iki satırla yeniden
-// tanımlanıyordu, TTL'ler ve timeout'lar bulundukları yere gömülü sihirli
-// sayılardı, İZELMAN adresi servisin içindeydi. Hiçbiri tek başına hata
-// değildi; sorun, birini değiştirmek gerektiğinde diğerlerinin sessizce
-// eski kalmasıydı.
-//
-// Ortam değişkeni kabul eden değerler açıkça process.env okur; gerisi sabit.
 
 const PORT = 3000; // start.sh'ın hazırlık yoklaması da bu portu bekler
 const OTP_PORT = Number(process.env.OTP_PORT) || 8080;
@@ -19,18 +10,16 @@ module.exports = {
   OTP_URL: `http://localhost:${OTP_PORT}/otp/gtfs/v1`,
 
   // Dış veri kaynakları
-  //
   // Otopark verisi İKİ ayrı kaynaktan gelir ve ikisi de gereklidir:
   //   ENVANTER (CKAN)  → 82 otopark, kapasite + konum + çalışma saati, doluluk YOK
   //   DOLULUK (İZELMAN) → 14 otopark, anlık boş/dolu, envanterin üstüne binlenir
-  // Tek başına İZELMAN kullanıldığında otopark sayısı 14 ile sınırlıydı;
-  // sensörü olmayan 68 otopark hiç görünmüyordu.
+  // Tek başına İZELMAN kullanıldığında otopark sayısı 14 
   IZELMAN_PARK_URL: "https://openapi.izmir.bel.tr/api/ibb/izum/otoparklar",
   CKAN_DATASTORE_URL: "https://acikveri.bizizmir.com/api/3/action/datastore_search",
 
   // İzmir Açık Veri portalındaki İZELMAN otopark envanteri. Abonelik
   // otoparkları (MKSB bariyerli, 17 kayıt) kasten dışarıda: halka açık
-  // değiller, P+R önerisi olarak gösterilmeleri yanlış olur.
+  // değiller, P+R önerisi olarak gösterilmeleri yanlış
   CKAN_OTOPARK_KAYNAKLARI: [
     { resourceId: "a982c5d9-931d-4a75-a61d-23127d8ddad2", tip: "OnStreet"  }, // Yol kenarı, 48
     { resourceId: "6ad4ad67-5923-49ec-8725-3f44f6f72aec", tip: "OffStreet" }, // Kapalı alan, 23
@@ -93,25 +82,6 @@ module.exports = {
     // raporlar — bu yüzden kısa.
     OTP_SAGLIK: 3000,
   },
-
-  // NOT — bisikletin "işe yarıyor" sayılma eşikleri buradan KALDIRILDI.
-  //
-  // Burada BISIKLET_ANLAMLI_MIN_M ve BISIKLET_ANLAMLI_PAY vardı; ikisi de
-  // "bisikletsiz yedek sorgusu atayım mı" kararını besliyordu. O yedek
-  // kaldırıldı (bkz. services/OtpService.js): bir bisiklet modu artık
-  // bisikletsiz güzergâh döndürmüyor.
-  //
-  // Eşikler tek yerde yaşıyor: izmir_ulasim/utils/routeScoring.js
-  //   BIKE_LEG_MIN         — bisiklet bacağı en az kaç metre olmalı
-  //   BISIKLET_ASGARI_PAY  — yolculuk süresinin en az yüzde kaçı olmalı
-  // İki kopya tutulduğunda ayrışıyorlardı; karar gösterim katmanına ait.
-  //
-  // Kaybolmaması gereken ölçüm (Konak → Bornova, Pzt 08:00): BICYCLE_PARKING
-  // erişimiyle 50.3 dk ve bisiklet bacağı 282 m; yalnız yürüyüşle 44.1 dk.
-  // Yani 282 metrelik sürüş yolculuğu 6.2 DAKİKA UZATIYORDU. Sebep,
-  // genelleştirilmiş maliyette yürüyüşün 2 kat cezalı, bisikletin cezasız
-  // olması: duvar saatinde kaybettiren rota maliyet tablosunda kazanıyor.
-
   // Bir otoparkın "Park + Devam" sayılması için raylı sistem/vapur
   // istasyonuna azami yürüme mesafesi (m).
   //

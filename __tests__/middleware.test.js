@@ -10,8 +10,7 @@ const sahteRes = () => {
 const sahteReq = (over = {}) => ({ method: "GET", originalUrl: "/parking/feed", ...over });
 
 describe("asyncHandler", () => {
-  // Bu sarmalayıcının tek işi bu: sarılmamış hâlinde reddedilen Promise
-  // Express'e hiç ulaşmaz, yanıt yazılmaz ve istek askıda kalır.
+
   test("reddedilen Promise'i next(err)'e verir", async () => {
     const hata = new Error("İZELMAN düştü");
     const next = jest.fn();

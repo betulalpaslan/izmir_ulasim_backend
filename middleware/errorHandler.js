@@ -1,11 +1,3 @@
-// Zincirin sonundaki tek hata çıkışı. Buraya asyncHandler'ın yakaladığı
-// reddler ve handler'ların next(err) çağrıları düşer.
-
-// Bu backend'in yaptığı işin neredeyse tamamı dış servis çağrısıdır
-// (Overpass, İZELMAN, OTP). Dolayısıyla bir hatanın varsayılan anlamı
-// "yukarı akış cevap vermedi" = 502'dir; 500 yalnızca hatanın gerçekten
-// bu kodda olduğu durumlara kalır. Ayrım istemci için önemli:
-// 502 → tekrar dene, 500 → burada bir hata var, denemenin faydası yok.
 const UPSTREAM_CODES = ["ECONNREFUSED", "ECONNABORTED", "ECONNRESET", "ETIMEDOUT", "ENOTFOUND", "EAI_AGAIN"];
 
 function errorHandler(err, req, res, next) {

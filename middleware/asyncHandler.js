@@ -1,9 +1,4 @@
-// Express 4, bir route handler'ın döndürdüğü reddedilmiş Promise'i GÖRMEZ.
-// async bir handler throw ederse Express bundan habersiz kalır: yanıt hiç
-// yazılmaz, istek istemci timeout'una kadar askıda durur. OTP'nin dakikada
-// bir çeken updater'ı için bu, hata almaktan daha kötüdür — hata alsa eski
-// veriyi korurdu, askıda kalınca updater thread'i boşuna bekler.
-//
+
 // Sarmalayıcı reddi yakalayıp next(err)'e verir; oradan errorHandler devralır.
 // Amaç tek bir ucu kurtarmak değil, bu hata sınıfını yapısal olarak
 // imkânsız kılmak: yeni bir async uç yazan kişi try/catch koymayı unutsa
@@ -13,10 +8,6 @@ const asyncHandler = (fn) => (req, res, next) => {
     // Asıl iş: reddedilen Promise → next(err)
     return Promise.resolve(fn(req, res, next)).catch(next);
   } catch (err) {
-    // Senkron throw'u Express zaten yakalar; yine de buraya alınıyor ki
-    // sarmalayıcının sözü tek olsun: "bu handler'dan hata sızmaz".
-    // Aksi hâlde hataların bir kısmı errorHandler'a, bir kısmı Express'in
-    // kendi varsayılan HTML hata sayfasına giderdi.
     next(err);
   }
 };

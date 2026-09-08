@@ -12,7 +12,6 @@ const osmRouter     = require("./routes/osmRouter");
 const app = express();
 app.use(cors());
 app.use(express.json());
-
 app.use("/", healthRouter);   // /health, /health/ready — diğer router.ların önünde
 app.use("/", routeRouter);
 app.use("/bisim", bisimRouter);

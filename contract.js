@@ -1,28 +1,14 @@
-// ─── Uygulama ile backend arasındaki sözleşme ──────────────────────────
-//
-// Bu iki depo `stations`, `spots`, `results`, `itineraries`, `lat`/`lon`
-// gibi alan adları üzerinden anlaşıyor. Bu isimler bir süre ne şemada, ne
-// tip dosyasında, ne dokümanda tanımlıydı — yalnızca iki tarafın koduna
-// gömülüydüler. Backend bir alanı yeniden adlandırsa hiçbir yerde hata
-// çıkmaz, uygulama sessizce boş liste gösterirdi.
-//
+// ─── Uygulama ile backend arası sözleşme ──────────────────────────
+
 // Burası o isimlerin tek tanımı. __tests__/contract.test.js her ucun
-// gerçekten bu şemaya uyduğunu doğrular; isim değiştiren biri testte
-// yakalanır, kullanıcıda değil.
-//
+// gerçekten bu şemaya uyduğunu doğrular; isim değiştiren biri testte yakalanır, kullanıcıda değil.
 // KURALLAR
-//   • Koordinat her yerde lat / lon. (İZELMAN "lng" der, ParkingService
+// Koordinat her yerde lat / lon. (İZELMAN "lng" der, ParkingService
 //     çeviriyi kendi içinde yapar; dışarı lon çıkar. Tek istisna OTP'nin
 //     dayattığı ParkAPI gövdesidir: orada coords.lng — bkz. OTP_PARKAPI.)
-//   • Bilinmeyen sayısal değer null'dır, 0 değil. 0 "gerçekten sıfır"
-//     demektir: kapasitesi bilinmeyen istasyon ile boş istasyon aynı şey
-//     değildir.
-//   • Liste dönen her uç, listeyi bir zarf içinde verir ({stations: [...]}).
-//     Çıplak dizi dönmek, ileride yanına updatedAt gibi bir alan eklemeyi
-//     kırıcı değişiklik hâline getirirdi.
+//  Bilinmeyen sayısal değer null'dır, 0 değil. 0 "gerçekten sıfır" demektir: kapasitesi bilinmeyen istasyon ile boş istasyon aynı şey değil
 
-// Uygulamanın TÜKETTİĞİ uçlar. `zarf` yanıtın kök alanı, `alanlar` o
-// dizideki her elemanın taşıması gereken anahtarlar.
+
 const UCLAR = {
   "GET /bisim/stations": {
     zarf: "bolgeler",
@@ -68,9 +54,7 @@ const UCLAR = {
   },
 };
 
-// OTP'nin dayattığı gövdeler — bunlar bizim tercihimiz değil, OTP'nin
-// updater'ları tam olarak bu adları arar. Bir alan adı yanlış yazıldığında
-// OTP hata vermeden sıfır kayıt yükler; bu bir kez yaşandı.
+// OTP gövdeleri
 const OTP_PARKAPI = {
   yol: "GET /parking/feed",
   zarf: "lots",
@@ -80,10 +64,8 @@ const OTP_PARKAPI = {
   not: "state zorunludur: OTP null kontrolü yapmadan okur, eksikse updater düşer. 'free' KOŞULLUDUR: yalnız doluluk gerçekten biliniyorsa gönderilir. Bilinmeyeni 0 yazmak OTP'ye 'bu otopark dolu' demektir ve otoparkı rotalamadan düşürür — kapasitesi bilinen ama sensörü olmayan 68 otopark böyle kaybolurdu.",
 };
 
-// Aynı ParkAPI gövdesi, farklı updater: OTP bunu BİSİKLET yeri olarak
-// kaydeder (sourceType: BICYCLE_PARK_API). `free` burada HİÇ gönderilmez —
-// doluluk araba yerlerinindir; taşınırsa dolu bir otopark bisiklete de
-// kapalı sayılır.
+//(sourceType: BICYCLE_PARK_API). 
+
 const OTP_BIKE_PARKAPI = {
   yol: "GET /parking/bike-feed",
   zarf: "lots",
@@ -114,8 +96,6 @@ const GBFS = {
   otpUpdater: { geofencingZones: true, not: "Bu bayrak olmadan OTP geofencing_zones.json'u hiç okumaz." },
 };
 
-// Sağlık uçları izleme aracının sözleşmesidir; alan adları değişirse
-// panolar sessizce boş kalır.
 const SAGLIK = {
   "GET /health": { alanlar: ["status", "uptimeSec", "checkedAt"] },
   "GET /health/ready": { alanlar: ["status", "issues", "uptimeSec", "checks", "checkedAt"] },

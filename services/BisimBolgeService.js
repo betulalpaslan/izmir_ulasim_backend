@@ -257,9 +257,6 @@ function getStatus() {
     bonusAlanlari: b.length,
     hizmetAlaniParca: alan,
     surum: yukle().surum,
-    // Uydurma değil ama ÖLÇÜM de değil: gerçek bisiklet yolu geometrisi
-    // üzerinde örneklenmiş alma noktaları. Sayısı /health'te görünsün ki
-    // sıfıra düştüğünde (veri dosyası okunamadı) sessiz kalmasın.
     almaNoktasi: (() => { try { return serbestBisikletler().length; } catch { return null; } })(),
     dusukGuven: b.filter((x) => x.guven === "dusuk").length,
   };

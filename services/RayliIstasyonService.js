@@ -4,36 +4,16 @@ const path  = require("path");
 
 const config = require("../config");
 
-// ─── Raylı sistem + vapur istasyonları ─────────────────────────────────
-// Tek işi var: bir koordinatın en yakın istasyona kaç metre uzakta olduğunu
-// söylemek. ParkingService bunu "bu otopark P+R sayılır mı" kararında
-// kullanır.
-//
-// Neden ayrı bir servis: P+R sınıflandırması önce İZELMAN feed'indeki
-// `poi.metroStation` bayraklarına bakıyordu. O bayraklar yalnız sensörlü 14
-// otoparkta var; CKAN envanterindeki 82 otoparkın hiçbirinde yok. Bayrak
-// yerine mesafe ölçülünce sınıflandırma kaynaktan bağımsız hale geliyor.
-//
-// StopIndexService de durak yakınlığı hesaplar ama OTP'den TÜM durakları
-// çeker (mod bilgisi olmadan, otobüs dahil) ve OTP ayakta olmasını gerektirir.
-// Burada kaynak doğrudan açık veri portalı: OTP kapalıyken de çalışır ve
-// yalnız raylı + vapur döner.
-
 const CACHE_FILE = path.join(__dirname, "..", "istasyon_cache.json");
 const HUCRE = 0.0045;          // ~500 m'lik ızgara hücresi
 const R = 6371000, D = Math.PI / 180;
 
-// Türler AYRI AYRI saklanır. Hepsi tek listede tutulup her turda baştan
-// yazıldığında, uçlardan biri o an yavaş olduğunda o türün istasyonları
-// sessizce kayboluyordu: ölçüldü, bir turda 91 istasyon yerine 36 yüklendi
-// (İZBAN 41 + iskele 14 düştü) ve P+R sayısı 52'den 44'e indi. Kimse hata
-// görmedi. Artık başarısız tür ESKİ verisini korur.
-let turler = new Map();        // tip → istasyon dizisi
-let turZamani = new Map();     // tip → son başarılı çekim zamanı
+
+let turler = new Map();        
+let turZamani = new Map();     
 let istasyonlar = null;
 let cacheTime = 0;
-let cacheSource = null;        // "canli" | "kismi" | "build-cache" | "none"
-let sonHatalar = [];           // tazelenemeyen türler — /health bunu okur
+let cacheSource = null;      
 let izgara = null;
 
 function haversine(lat1, lon1, lat2, lon2) {
@@ -44,9 +24,6 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 const anahtar = (lat, lon) => Math.floor(lat / HUCRE) + "|" + Math.floor(lon / HUCRE);
 
-// Dört ucun gövdesi dört farklı biçimde geliyor: alan adları Türkçe ama
-// tutarsız (Adi/IstasyonAdi/ADI), enlem kimi yerde string, tren garları ise
-// sayfalı bir zarfın `onemliyer` alanında. Normalleştirme burada bitiyor.
 const AYRISTIRICILAR = {
   metro:  (d) => (Array.isArray(d) ? d : []).map((r) => ({ lat: +r.Enlem, lon: +r.Boylam, ad: r.Adi })),
   izban:  (d) => (Array.isArray(d) ? d : []).map((r) => ({ lat: +r.Enlem, lon: +r.Boylam, ad: r.IstasyonAdi })),
@@ -97,8 +74,6 @@ function diskYedeginiYukle() {
 async function fetchIstasyonlar() {
   if (istasyonlar && Date.now() - cacheTime < config.TTL.ISTASYON) return istasyonlar;
 
-  // Henüz hiç veri yoksa önce diskten tohumla: aşağıdaki uçlardan biri
-  // düşerse o türün istasyonları en azından yedekten gelir.
   if (!turler.size) diskYedeginiYukle();
 
   const girisler = Object.entries(config.ISTASYON_URLS);
@@ -128,26 +103,18 @@ async function fetchIstasyonlar() {
   }
 
   yaz(liste, sonHatalar.length ? "kismi" : "canli");
-  // Disk yedeği yalnız TÜM türler tazeyken yazılır: kısmi bir listeyi diske
-  // yazmak, eksikliği kalıcı hale getirirdi.
-  // Test ortamında yazılmaz: sözleşme testi tek sahte istasyonla çalışıyor ve
-  // koruma olmadan gerçek 91 kayıtlık tohumu eziyordu (bkz. ParkingService
-  // tohumuYaz — aynı arıza).
+
   if (!sonHatalar.length && process.env.NODE_ENV !== "test" && !process.env.JEST_WORKER_ID) {
     try { fs.writeFileSync(CACHE_FILE, JSON.stringify(liste)); } catch {}
   }
   return istasyonlar;
 }
 
-// En yakın istasyona mesafe (m) ve o istasyonun türü. İstasyon indeksi hiç
-// yüklenmemişse null döner — çağıran bunu "bilinmiyor" diye yorumlamalı,
-// "yakında istasyon yok" diye değil.
 function enYakinIstasyon(lat, lon) {
   if (!izgara || !istasyonlar?.length) return null;
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
 
-  // Önce 3x3 hücre (~1.5 km) taranır; boş çıkarsa tam listeye düşülür.
-  // Otoparkların çoğu ilk turda eşleşir, tam tarama nadiren çalışır.
+
   const i = Math.floor(lat / HUCRE), j = Math.floor(lon / HUCRE);
   const adaylar = [];
   for (let di = -1; di <= 1; di++) {
@@ -174,7 +141,6 @@ function getStatus() {
     ageSec: istasyonlar ? Math.floor((Date.now() - cacheTime) / 1000) : null,
     istasyon: istasyonlar ? istasyonlar.length : null,
     turler: turDetay,
-    // Boş değilse: P+R sayısı olması gerekenden düşük, sebebi burada.
     tazelenemeyen: sonHatalar,
   };
 }

@@ -2,19 +2,7 @@ const path = require("path");
 const config = require("../config");
 const { createOverpassSource, IZMIR_BBOX } = require("./OverpassService");
 
-// ─── OSM kaynaklı park yerleri ─────────────────────────────────────────
-// İki ayrı katman, iki ayrı kaynak: araba otoparkları ve bisiklet parkları.
-// İkisi de uygulamadan taşındı; artık cache, mirror ve disk yedeği
-// arkalarında (bkz. OverpassService).
-//
-// Not: bisiklet parkları OTP graph'ında da var (OSM'den build edilir) ve
-// /parking/otp-lots?vehicle=bicycle onları döndürür. Bu uç ise OTP'ye
-// bağımlı değildir: OTP kapalıyken de harita katmanı çizilebilsin diye
-// doğrudan Overpass'tan beslenir.
 
-// Kapalı/yeraltı otoparklar + isimli açık otoparklar. İsimsiz yüzey
-// otoparkları kasten dışarıda: OSM'de her market önü işaretlenmiş durumda
-// ve haritayı okunmaz hâle getiriyorlar.
 const OTOPARK_SORGUSU = `
   [out:json][timeout:10];
   (
@@ -41,9 +29,7 @@ const bisikletParkKaynak = createOverpassSource({
   cacheFile: path.join(__dirname, "..", "bike_parking_cache.json"),
 });
 
-// way'lerin koordinatı `out center` ile center.lat/lon'a düşer; node'larda
-// doğrudan lat/lon vardır. İkisini de karşılamayan kayıt atılır — koordinatsız
-// bir otopark haritada 0,0'a, yani Gine Körfezi'ne düşer.
+
 function toOsmParking(e) {
   return {
     id:       e.id,
@@ -61,8 +47,6 @@ function toBicycleParking(e) {
     id:       e.id,
     lat:      e.lat,
     lon:      e.lon,
-    // OSM'de bisiklet parklarının çoğunda capacity etiketi yok. Bilinmiyorsa
-    // null'dır; uydurma bir sayı kullanıcıya gerçek yuva sayısı gibi görünür.
     capacity: parseInt(e.tags?.capacity) || null,
     covered:  e.tags?.covered === "yes" ? true : e.tags?.covered === "no" ? false : null,
   };

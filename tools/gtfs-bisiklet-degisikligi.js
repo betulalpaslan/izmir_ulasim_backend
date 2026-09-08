@@ -1,40 +1,3 @@
-#!/usr/bin/env node
-// GTFS bisiklet taşıma yaması.
-//
-//   node tools/gtfs-bisiklet-yamasi.js <gtfs-dizini>
-//   node tools/gtfs-bisiklet-yamasi.js <gtfs-dizini> --denetle
-//
-// NİYE VAR. OTP "bisikleti yanına alıp transite binmek" güzergâhını YALNIZ
-// GTFS'teki trips.bikes_allowed=1 olan seferlerde üretir. İzmir feed'inde bu
-// alan kullanılamaz durumda:
-//
-//   ESHOT otobüs : 21.302 sefer "izinli", 46.095 "bilgi yok" — üstelik 406
-//                  hattın 119'unda AYNI hat hem 0 hem 1 sefer taşıyor
-//                  (hat 42: 531 izinli, 38 bilgi yok). Bisiklet otobüse ya
-//                  sığar ya sığmaz, sefere göre değişmez: bu veri değil gürültü.
-//   Tramvay      : alan boş
-//   İZBAN        : alan boş
-//   Metro        : sütun hiç yok
-//
-// Yani gerçekten bisiklet binebilen üç sistemde HİÇ veri yok, binemeyen
-// otobüste "izinli" yazıyor — tam ters.
-//
-// GERÇEK DURUM (kaynaklar):
-//   metro   → İZMİR METRO A.Ş. açık verisi "Bisikletli Giriş Sayıları"
-//             (acikveri.bizizmir.com, kaynak c774b611-0be0-4021-ba4c-8bec8cc7201d):
-//             2020'den beri aylık kayıt, 2026'nın 7 ayında 58.123 giriş,
-//             temmuzda günde ~320. Kesin izinli ve artıyor.
-//   tramvay → İzmir Tramvayı kuralı: ek ücret ödemeden bisiklet, katlanabilir
-//             bisiklet, elektrikli bisiklet ve scooter taşınabilir
-//             (motosiklet ebadında/ağırlığında ve üç tekerlekli olanlar hariç).
-//   İZBAN   → aynı şekilde izinli.
-//   ESHOT   → izin verildiğine dair kaynak yok; bisikletli giriş verisi de yok.
-//
-// BU YAMA FEED HER TAZELENDİĞİNDE YENİDEN UYGULANMALI ve ardından graph
-// yeniden derlenmeli:
-//   java -Xmx3g -jar otp-shaded-2.8.1.jar --build --save <gtfs-dizini>
-// Yamasız derlenen bir graph'ta bisikletle transite binme güzergâhı sessizce
-// kaybolur; hata verilmez, sadece o seçenek hiç üretilmez.
 
 const fs = require("fs");
 const path = require("path");
@@ -71,9 +34,6 @@ function csvYaz(basliklar, kayitlar) {
     .join("\n") + "\n";
 }
 
-// Zip'e dokunmak için harici araç istemiyoruz; Node'un kendi zlib'i tek
-// dosya değiştirmeye yetmiyor. PowerShell her Windows'ta var, Linux'ta
-// (Railway) bu araç zaten çalıştırılmıyor — yama build makinesinde uygulanır.
 function zipIcindenOku(zipYolu, dosya) {
   return execFileSync("powershell", ["-NoProfile", "-Command", `
     Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -135,7 +95,7 @@ function feedYamala(zipYolu, denetle) {
 const dizin = process.argv[2];
 const denetle = process.argv.includes("--denetle");
 if (!dizin) {
-  console.error("kullanım: node tools/gtfs-bisiklet-yamasi.js <gtfs-dizini> [--denetle]");
+  console.error("kullanım: node tools/gtfs-bisiklet-degisikligi.js <gtfs-dizini> [--denetle]");
   process.exit(2);
 }
 
@@ -149,5 +109,5 @@ if (denetle) {
   console.log(`\nDenetim: ${toplam} sefer yamasız.`);
   process.exit(toplam ? 1 : 0);
 }
-console.log(`\nToplam ${toplam} sefer yamalandı. Graph'ı yeniden derlemeyi unutmayın:`);
+console.log(`\nToplam ${toplam} sefer değişikliği uygulandı. Graph'ı yeniden derlemeyi unutmayın:`);
 console.log(`  java -Xmx3g -jar otp-shaded-2.8.1.jar --build --save ${dizin}`);

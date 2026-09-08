@@ -72,29 +72,20 @@ describe("buildModesInput", () => {
     expect(out.direct).toBeUndefined();
   });
 
-  // BICYCLE_PARKING erişimi, OTP'nin bisiklet park yeri olarak bildiği
-  // noktaları kullanır: OSM'den graph'a giren amenity=bicycle_parking
-  // noktaları ve /parking/bike-feed'in bildirdiği raylı sistem istasyonları
-  // (bkz. ParkingService.bisikletParkYerleri).
+
   test("bicycle + PARK: bisikleti park et, toplu taşımaya bin", () => {
     const out = buildModesInput("bicycle", "PARK", TRANSIT);
     expect(out.transit.access).toEqual(["BICYCLE_PARKING"]);
     expect(out.direct).toBeUndefined();
   });
 
-  // WALK, BICYCLE_RENTAL'ın yanında ZORUNLU: onsuz OTP "BIKE_RENTAL needs to
-  // be combined with WALK mode for the same leg" hatası verir ve mod hiç
-  // sonuç döndürmez. Ölçüldü — kaldırma denendi, mod tamamen sustu.
+
   test("bicycle + RENT: BİSİM erişim/çıkışta, WALK ile birlikte", () => {
     const out = buildModesInput("bicycle", "RENT", TRANSIT);
     expect(out.transit.access).toEqual(["BICYCLE_RENTAL", "WALK"]);
     expect(out.transit.egress).toEqual(["BICYCLE_RENTAL", "WALK"]);
   });
 
-  // Bisiklet modlarının İKİSİ DE aktarmalıdır. Tek başına bisiklet sürüşü
-  // ölçümde kullanıcıya işe yaramaz tek bir kart üretiyordu (Narlıdere →
-  // Çiğli: 137 dk / 33.5 km kesintisiz sürüş) ve aktarmalı adayları listeden
-  // itiyordu — bu yüzden `direct` hiçbir bisiklet modunda istenmiyor.
   test("hiçbir bisiklet modu doğrudan sürüş istemez", () => {
     expect(buildModesInput("bicycle", "PARK", TRANSIT).direct).toBeUndefined();
     expect(buildModesInput("bicycle", "RENT", TRANSIT).direct).toBeUndefined();
@@ -110,15 +101,6 @@ describe("buildModesInput", () => {
   });
 });
 
-// NOT: extractCriteria ve rankWithTopsis testleri, o fonksiyonlarla birlikte
-// kaldırıldı. Güzergâh sıralaması artık yalnızca uygulamada yapılıyor
-// (izmir_ulasim/utils/routeScoring.js) ve orada test ediliyor.
-
-// ─── Kendi bisikletinde iki güzergâh tipi ──────────────────────────────
-// Bisiklet İzmir'de metroya, tramvaya ve İZBAN'a bindirilebiliyor; yani
-// istasyonda bırakmak tek seçenek değil. OTP ikisini AYNI erişim listesinde
-// kabul etmiyor ("Bicycle can't be combined with other modes for the same
-// leg: [BIKE, BIKE_TO_PARK]"), bu yüzden iki ayrı sorgu atılıyor.
 describe("buildModesInputs", () => {
   test("kendi bisikleti: hem taşıma hem park sorgusu üretilir", () => {
     const cikti = buildModesInputs("bicycle", "PARK", TRANSIT);
@@ -146,13 +128,6 @@ describe("buildModesInputs", () => {
   });
 });
 
-// ─── Kiralık bisiklet etiketleme ───────────────────────────────────────
-// OTP kiralık bisikleti de "BICYCLE" diye bildirir. Kiralık olduğu yalnız
-// bacağın uçlarındaki alandan anlaşılır ve BU ALAN MODELE GÖRE DEĞİŞİR:
-// istasyonlu ağda `vehicleRentalStation`, dockless ağda `rentalVehicle`.
-// BİSİM dockless'a geçince ikincisi devreye girdi; yalnız birincisine
-// bakıldığında etiketleme sessizce başarısız oluyor ve uygulamanın BİSİM
-// süzgeci tüm güzergâhları eliyordu.
 describe("kiralık bisiklet etiketleme", () => {
   const KONUM = { fromLat: 38.41, fromLon: 27.12, toLat: 38.44, toLon: 27.15 };
   const yanit = (legs) => ({
@@ -187,19 +162,7 @@ describe("kiralık bisiklet etiketleme", () => {
   });
 });
 
-// ─── İki sorgunun birleştirilmesi ──────────────────────────────────────
-// Kendi bisikletinde iki ayrı OTP sorgusu atılır (taşıma + park) ve
-// sonuçlar birleştirilir. Buradaki testler o birleştirmenin kenarlarını
-// tutuyor.
-//
-// NOT: Burada bir zamanlar "bisikletsiz yedek" testleri vardı. O mekanizma
-// kaldırıldı (bkz. services/OtpService.js): bisiklet hiçbir güzergâhta işe
-// yaramadığında backend yürüyüş erişimiyle yeniden sorup BİSİKLETSİZ
-// güzergâhlar döndürüyordu. Ölçümü doğruydu (282 m'lik bisiklet bacağı
-// yolculuğu 6.2 dakika uzatıyordu) ama çözümü yanlış yerdeydi: kullanıcı
-// "Bisikletim + Aktarma" seçmişken içinde bisiklet olmayan bir liste
-// alıyordu. Karar artık tek yerde — uygulamanın MOD_AMACI süzgeci — ve
-// mod boş kalırsa sebebi yazılıyor.
+
 describe("bisiklet sorgularının birleştirilmesi", () => {
   const KONUM = { fromLat: 38.41, fromLon: 27.12, toLat: 38.47, toLon: 27.22 };
   const yanit = (legs) => ({
@@ -220,8 +183,7 @@ describe("bisiklet sorgularının birleştirilmesi", () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  // Kendi bisikletinde ÜÇ istek gider: taşıma + park + bisikletsiz taban
-  // çizgisi. Üçüncüsünün sonucu listeye girmez, yalnız ölçü olarak kullanılır.
+
   test("iki sorgunun sonucu birleşir", async () => {
     axios.post
       .mockResolvedValueOnce(yanit(tasinan))
@@ -232,8 +194,6 @@ describe("bisiklet sorgularının birleştirilmesi", () => {
     expect(r.itineraries).toHaveLength(2);
   });
 
-  // Aynı güzergâh iki sorgudan da dönebilir (ör. bisiklet hiç kullanılmayan
-  // düz transit rotası); kullanıcı aynı kartı iki kez görmemeli.
   test("iki sorgudan gelen aynı güzergâh tekilleşir", async () => {
     axios.post
       .mockResolvedValueOnce(yanit(parkli))
@@ -243,8 +203,6 @@ describe("bisiklet sorgularının birleştirilmesi", () => {
     expect(r.itineraries).toHaveLength(1);
   });
 
-  // Tek sorgu düştüğünde tüm isteği başarısız saymak, çalışan seçeneği de
-  // kaybetmek olurdu.
   test("sorgulardan biri düşerse diğerinin sonucu döner", async () => {
     axios.post
       .mockRejectedValueOnce(new Error("timeout"))
@@ -262,12 +220,6 @@ describe("bisiklet sorgularının birleştirilmesi", () => {
       .rejects.toThrow("timeout");
   });
 
-  // ─── Bisikletsiz taban çizgisi ──
-  // "Bu bisiklet işe yarıyor mu" sorusunun dürüst cevabı ancak bisikletsiz
-  // alternatifle karşılaştırarak verilebilir (ölçüm: 282 m'lik bacak
-  // yolculuğu 6.2 dakika UZATIYORDU). Sonuç kullanıcıya gösterilmez; yalnız
-  // en iyi süresi her güzergâha iliştirilir ve eleme kararını gösterim
-  // katmanı verir (MOD_AMACI.bicycle_park).
   test("bisiklet profilinde taban çizgisi sorgusu yapılır ve güzergâha iliştirilir", async () => {
     const yuruyusluTaban = [
       { mode: "WALK", duration: 600, distance: 800 },
@@ -301,19 +253,12 @@ describe("bisiklet sorgularının birleştirilmesi", () => {
     expect(r.itineraries).toHaveLength(1);
   });
 
-  // Bisiklet dışı profillerde tek sorgu atılır; ikinci sorgu boşuna
-  // OTP yükü demektir.
   test("bisiklet dışı profillerde tek sorgu atılır", async () => {
     axios.post.mockResolvedValueOnce(yanit([{ mode: "WALK", duration: 280, distance: 350 }]));
     await planRoute({ ...KONUM, profile: "transit" });
     expect(axios.post).toHaveBeenCalledTimes(1);
   });
 
-  // Artık HİÇBİR koşulda bisikletsiz yedek sorgusu atılmaz: bisiklet
-  // modunda üçüncü bir istek görülürse yedek geri gelmiş demektir.
-  // Bisiklet kısa olsa bile YÜRÜYÜŞLÜ GÜZERGÂH DÖNMEZ. Eski "bisikletsiz
-  // yedek" burada listeyi değiştiriyordu; artık yalnız taban çizgisi
-  // ölçülür, liste bisikletli kalır.
   test("bisiklet kısa olsa bile listeye yürüyüşlü güzergâh girmez", async () => {
     const cokKisa = [
       { mode: "BICYCLE", duration: 60, distance: 282 },

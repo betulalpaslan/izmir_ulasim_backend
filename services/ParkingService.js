@@ -5,46 +5,10 @@ const path  = require("path");
 const config = require("../config");
 const { fetchIstasyonlar, enYakinIstasyon, haversine } = require("./RayliIstasyonService");
 
-// ─── Otopark verisi ────────────────────────────────────────────────────
-// İki kaynak, iki farklı iş:
-//
-//   ENVANTER  — İzmir Açık Veri (CKAN), 82 otopark. Kapasite, konum, çalışma
-//               saati. Doluluk YOK. Nadiren değişir, günlük tazelenir.
-//   DOLULUK   — İZELMAN openapi ucu, 14 otopark. Anlık boş/dolu. Envanterin
-//               üstüne koordinat eşleşmesiyle binlenir.
-//
-// Önceden yalnız İZELMAN kullanılıyordu ve envanter ondan türetiliyordu:
-// sensörü olmayan 68 otopark hiç var olmamış gibi davranılıyordu. Doluluğu
-// bilinmeyen bir otoparkı listelememek, onu göstermemekten daha kötü —
-// kapasitesi ve konumu biliniyor, rotalama için bu yeterli.
-//
-// İkinci değişiklik: ağ artık istek yolunda beklenmez. İZELMAN ucu ölçülen
-// üç denemede 48.8 / 57.0 / 58.3 saniyede yanıtladı; 8 saniyelik timeout her
-// turda dolup /parking/feed'i 8 saniye geciktiriyordu. OTP'nin ParkAPI
-// updater'ı 5 saniyede vazgeçtiği için graph'a HİÇBİR otopark girmiyordu
-// (otp.log'da 237 başarısız çekim, tek bir başarı yok). Artık istekler eldeki
-// listeyi anında döner, yenileme arka planda çalışır.
+
 
 const BUILD_CACHE_FILE = path.join(__dirname, "..", "parking_cache.json");
 
-// ─── Dış çağrı: geçici hatada tekrar dene ──────────────────────────────
-//
-// Ölçülen olay: konteynerde art arda beş kez
-//   "Otopark doluluğu alınamadı: getaddrinfo EAI_AGAIN openapi.izmir.bel.tr"
-// Adres çözümlemesi düşüyordu, uç değil — aynı anda dışarıdan yapılan
-// istekler HTTP 200 dönüyordu (25–39 sn, yavaş ama sağlam) ve alan adı
-// 0,02 sn'de çözülüyordu. EAI_AGAIN adı gereği GEÇİCİ bir hatadır,
-// "tekrar dene" demektir; ama kod tek deneme yapıp 5 dakikalık tura
-// bırakıyordu. Anlık bir DNS titremesi böylece 5 dakikalık veri kaybına
-// dönüşüyordu.
-//
-// `family: 4` — alan adının AAAA (IPv6) kaydı YOK. Node çift yığın
-// çözümlemede AAAA sorgusunu da bekler; resolver o sorguyu yanıtsız
-// bırakırsa sonuç EAI_AGAIN olur. IPv4'e sabitlemek o sorguyu hiç
-// yaptırmıyor.
-//
-// Yalnız GEÇİCİ hatalar tekrarlanır. HTTP 4xx/5xx tekrarlanmaz: sunucu
-// yanıt vermiştir, ısrar etmek yükü artırmaktan başka işe yaramaz.
 const GECICI_HATALAR = new Set([
   "EAI_AGAIN",     // DNS geçici olarak çözemedi
   "ETIMEDOUT",
@@ -147,15 +111,7 @@ async function envanteriYenile() {
   console.warn("Otopark envanteri: tüm kaynaklar başarısız");
 }
 
-// Disk tohumunu yazmanın İKİ koşulu var, ikisi de ölçülmüş arızadan geliyor:
-//
-//  1. Test ortamında hiç yazılmaz. Sözleşme testi mock'lanmış CKAN yanıtıyla
-//     yenile() çağırıyor; koruma olmadan 82 kayıtlık gerçek tohum dosyası 3
-//     sahte kayıtla eziliyordu ve sunucu bir sonraki açılışta onu okuyup 2
-//     otopark gösteriyordu. Test, ürettiği veriyi depoya sızdırmamalı.
-//  2. Şüpheli derecede kısa liste yazılmaz. Üç CKAN kaynağından ikisi
-//     düştüğünde elde 11 kayıt kalır; onu tohum diye kalıcılaştırmak, geçici
-//     bir kesintiyi kalıcı veri kaybına çevirir.
+
 const TOHUM_ASGARI = 20;
 function tohumuYaz(liste) {
   if (process.env.NODE_ENV === "test" || process.env.JEST_WORKER_ID) return;
@@ -234,19 +190,7 @@ function isimSkoru(a, b) {
   return 0;
 }
 
-// İZELMAN kaydını envanterdeki karşılığına bağlar. Ortak bir anahtar yok
-// (CKAN'da ufid, İZELMAN'da CKAN satır numarası bulunmuyor), bu yüzden
-// eşleştirme konuma göre yapılır. 150 m, aynı otoparkın iki kaynakta farklı
-// noktalardan (giriş / alan merkezi) işaretlenmesini karşılar.
-//
-// Ama YALNIZ mesafe yetmiyor. Ölçüldü: Ali Çetinkaya yol kenarı otoparkı
-// (28 yer) 49 m ötedeki ALSANCAK YER ALTI'na (133 yer) bağlanıyordu; doğru
-// karşılığı olan ALİ ÇETİNKAYA BULVARI (30 yer) 62 m'de, yani biraz daha
-// uzaktaydı. Sonuç: 133 araçlık bir yeraltı garajı haritada 28 yer kapasiteli
-// görünüyor ve başka bir otoparkın doluluğunu gösteriyordu.
-//
-// Bu yüzden aday, üç sinyalin birleşiminden seçilir: isim benzerliği (en
-// ağırlıklı — sokak adı iki kaynakta da yazıyor), kapasite yakınlığı, mesafe.
+
 function enYakinEnvanterKaydi(lot, liste) {
   const t = lot.occupancy?.total;
   const lotKap = ((t?.free) || 0) + ((t?.occupied) || 0);
@@ -308,7 +252,6 @@ function birlestir() {
   birlesik = taban;
 }
 
-// ─── Yenileme döngüsü ──────────────────────────────────────────────────
 
 let yenileniyor = null;
 
@@ -354,15 +297,6 @@ function fetchParks() {
   return birlesik;
 }
 
-// ─── Sınıflandırma ve dönüşümler ───────────────────────────────────────
-
-// Bir otoparkın "Park + Devam" sayılması.
-//
-// Eskiden yalnız İZELMAN'ın `poi.metroStation` gibi bayraklarına bakıyordu.
-// O bayraklar sensörlü 14 kayıtta var, envanterin kalan 68'inde yok — yani
-// kural, veri kaynağının kapsamına göre sonuç veriyordu. Artık asıl ölçüt
-// istasyona olan gerçek mesafe; `poi` yalnız geriye dönük yedek olarak duruyor
-// (kaynak onu doldurduysa yok saymak için sebep yok).
 function isParkAndRide(p) {
   if (p.type === "OffStreet") return true;
   if (Number.isFinite(p.rayliMesafeM) && p.rayliMesafeM <= config.PR_YARICAP_M) return true;
@@ -384,15 +318,7 @@ function dakikaya(s) {
 
 const GUNLER = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
-// Çalışma saatinden açık/kapalı kararı.
-//
-// İZELMAN'ın `status` alanı KULLANILMIYOR: canlı yanıtta 14 otoparkın 13'ü,
-// çalışma saati 07:00–22:00 yazmasına rağmen öğle vakti "Closed" bildiriyor.
-// Bu değer OTP'ye state:"closed" olarak geçtiğinde OTP o otoparkta park etmeyi
-// hiç denemez — yani feed düzelse bile P+R rotası üretilmezdi.
-//
-// Saat bilinmiyorsa AÇIK kabul edilir: yanlışlıkla açık saymak bir otoparkı
-// gereksiz önerir, yanlışlıkla kapalı saymak onu tamamen görünmez kılar.
+
 function acikMi(p, simdi = new Date()) {
   if (p.nonstop === true) return true;
   let acilis = p.acilis, kapanis = p.kapanis;
@@ -408,12 +334,6 @@ function acikMi(p, simdi = new Date()) {
   return k > a ? su >= a && su < k : su >= a || su < k;              // gece aşan aralık
 }
 
-// OTP ParkAPI formatı (offenesdresden/ParkAPI şeması).
-// OTP'nin ParkAPIUpdater'ı gövdede "lots" dizisi arar ve her lot için
-// coords.lat / coords.lng / total / free alanlarını okur. Eski
-// {vehicleParkings:[{x,y,capacity,availability}]} biçimi hiçbir alanı
-// karşılamadığı için OTP sessizce 0 otopark yüklüyordu.
-// state ZORUNLUDUR: OTP null kontrolü yapmadan okur, eksikse updater düşer.
 function toOtpParking(p) {
   const t = p.occupancy?.total;
   const dolulukVar = !!t && (t.free != null || t.occupied != null);
@@ -424,9 +344,7 @@ function toOtpParking(p) {
     state:  acikMi(p) ? "open" : "closed",
     total:  kapasiteHesapla(p),
   };
-  // free YALNIZCA gerçekten biliniyorsa gönderilir. Bilinmeyeni 0 yazmak
-  // OTP'ye "bu otopark dolu" demektir ve otoparkı rotalamadan tamamen düşürür
-  // — kapasitesi bilinen 68 statik otoparkın hepsi böyle kaybolurdu.
+
   if (dolulukVar) lot.free = t.free || 0;
   return lot;
 }
@@ -457,47 +375,11 @@ function toParkingStation(p) {
   };
 }
 
-// ─── Bisiklet park yerleri (BICYCLE_PARK_API feed'i) ───────────────────
-//
-// Neden ayrı bir feed gerekti — ölçüm, Narlıdere → Çiğli, Pzt 08:00,
-// "bisikletim + aktarma" modu:
-//
-//   BİSİKLET 18 dk / 4.2 km  →  OTOBÜS 311, 13 dk  →  METRO M1
-//
-// Yani kullanıcı metroya bisikletle gidebilecekken, metronun 3 km beriside
-// bisikletini bırakıp araya bir otobüs bacağı sıkıştırılıyordu. Sebep
-// rotalamada değil VERİDE: OTP'nin bisiklet bacağı ancak bisiklet park yeri
-// OLAN bir noktada bitebilir, ve graph'taki 87 bisiklet parkının tamamı
-// OSM'den geliyor — İnciraltı, Sahilevleri, Bostanlı gibi sahil/rekreasyon
-// noktaları. Raylı sistem istasyonlarının hiçbirinde kayıt yok. OTP de en
-// yakın gerçek park yerini seçip kalan mesafeyi otobüsle kapatıyordu.
-//
-// Bizim /parking/feed'imiz bu boşluğu dolduramıyordu: PARK_API kaynak tipi
-// lotları YALNIZ araba için kaydeder. OTP'nin BICYCLE_PARK_API tipi aynı
-// gövdeyi bisiklet yeri olarak yutar — bu feed onun içindir.
-//
-// ── Kaynak neden RayliIstasyonService DEĞİL ──
-// İlk deneme istasyonları İZULAŞ'ın açık veri uçlarından aldı ve ÖLÇÜMDE
-// DAHA KÖTÜ sonuç verdi: "Narlıdere İtfaiye" metro istasyonu o listede var,
-// ama GTFS feed'inde orada metro seferi YOK (900 m yarıçapta yalnız otobüs
-// durağı bulunuyor). OTP bisikleti oraya park edip yine otobüse biniyordu —
-// düzeltilmek istenen arızanın ta kendisi, üstelik daha yakın bir noktada.
-//
-// Bu yüzden kaynak OTP'nin KENDİ durak listesi: bir noktaya bisiklet parkı
-// koymanın tek gerekçesi orada gerçekten raylı sefer olmasıdır, idari bir
-// listede istasyon yazması değil. Aynı sebeple vapur iskelesi de yok —
-// İzmir GTFS'inde route_type=4 hiç bulunmuyor.
 const RAYLI_MODLAR = new Set(["SUBWAY", "RAIL", "TRAM"]);
 
-// İki peron ve üç giriş aynı istasyondur. Bu yarıçap içindeki raylı duraklar
-// tek bir park noktasında toplanır; yoksa Halkapınar tek başına altı lot
-// üretir ve OTP'nin park yeri seçimi anlamsızca dallanır.
 const ISTASYON_KUMELEME_M = 150;
 
-// Kapasite ÖLÇÜLMÜŞ değil nominaldir: İzmir metrosu ve İZBAN istasyonlarında
-// bisiklet park yeri bulunur ama sayısal envanteri yayınlanmıyor. Yalnız
-// OTP'nin "burada park edilebilir" bilmesi için gönderilir, kullanıcıya
-// dönük uçlarda gösterilmez. Envanter yayınlanırsa bu sabit onunla değişmeli.
+
 const ISTASYON_BISIKLET_KAPASITESI = 20;
 
 const RAYLI_DURAK_CACHE = path.join(__dirname, "..", "rayli_durak_cache.json");
@@ -515,10 +397,7 @@ function rayliDuraklariKumele(duraklar) {
   return kumeler;
 }
 
-// Raylı durakları OTP'den çeker. Konumlar graph ömrü boyunca sabittir, bu
-// yüzden günde bir kez yeterli. OTP'ye ulaşılamazsa disk yedeği kullanılır:
-// bu feed OTP'nin açılışında çekiliyor ve o an GraphQL ucu henüz yanıt
-// vermeyebilir — yedek olmadan ilk turda boş feed gönderilirdi.
+
 async function rayliDuraklar() {
   if (rayliDurakListesi && Date.now() - rayliDurakZamani < config.TTL.ISTASYON) {
     return rayliDurakListesi;
@@ -557,10 +436,7 @@ async function rayliDuraklar() {
   }
 }
 
-// Test için: liste modül içinde 24 saat önbelleklenir, testler arasında
-// sıfırlanmazsa ilk testin verisi sonrakilere sızar (bir kez oldu).
-// jest.resetModules() işe yaramıyor — o, testin ayarladığı axios mock'unu da
-// yeniliyor ve modül gerçek ağa/disk yedeğine düşüyor.
+
 function rayliDuraklariUnut() {
   rayliDurakListesi = null;
   rayliDurakZamani = 0;
@@ -568,11 +444,7 @@ function rayliDuraklariUnut() {
 
 const slug = (s) => adNormalize(s).replace(/ /g, "-") || "ISTASYON";
 
-// OTP'ye bisiklet parkı olarak sunulacak noktalar:
-//   • raylı sefer YAPILAN duraklar (asıl katkı — yukarıdaki ölçüme bakınız)
-//   • P+R otoparkları (araba yeri olan yere bisiklet de bırakılır)
-// OSM'den gelen 87 bisiklet parkı graph'ta zaten var; bu feed onların
-// yerini almaz, üstüne eklenir.
+
 async function bisikletParkYerleri() {
   const lots = [];
   const gorulen = new Set();
@@ -603,14 +475,6 @@ async function bisikletParkYerleri() {
   return lots;
 }
 
-// ─── Sağlık durumu ─────────────────────────────────────────────────────
-// Bkz. OverpassService kaynaklarının getStatus'u — aynı gerekçe. parkAndRide
-// sayısı ayrıca raporlanır: OTP feed'i yalnızca o alt kümeyi görür, dolayısıyla
-// "kaynak yanıt veriyor ama P+R lotu 0" durumu rotalamayı sessizce bozar.
-//
-// Tek bir `source` alanı artık gerçeği anlatmıyor: envanter ve doluluk ayrı
-// kaynaklardan gelir ve ayrı ayrı düşebilir. Eski alan, /health/ready'deki
-// mevcut kontroller kırılmasın diye envanterin kaynağını göstermeye devam eder.
 function getStatus() {
   const now = Date.now();
   return {
@@ -636,7 +500,5 @@ module.exports = {
   fetchParks, baslatYenileme, durdurYenileme, yenile,
   isParkAndRide, toOtpParking, toParkingStation, acikMi, getStatus,
   bisikletParkYerleri, rayliDuraklar, rayliDuraklariUnut,
-  // Test için: eşleştirme saf bir fonksiyon ve bir kez sessizce yanlış
-  // otoparkı bağladı (bkz. enYakinEnvanterKaydi yorumu).
   enYakinEnvanterKaydi, isimSkoru,
 };

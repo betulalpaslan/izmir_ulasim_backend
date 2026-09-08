@@ -4,15 +4,13 @@ const config = require("../config");
 const axios = require("axios");
 const bolgeService = require("../services/BisimBolgeService");
 
-
-// Bölgede yuva yoktur; bu değer yalnız OTP'nin "kullanılabilir" saymasını
-// sağlamak için gönderilen nominal bir sayıdır, gerçek bir ölçüm değildir.
+// Bölgede yuva yoktur; bu değer yalnız OTP'nin "kullanılabilir" saymasını sağlamak için gönderilen nominal bir sayıdır, gerçek bir ölçüm değildir.
 const BOLGE_NOMINAL_KAPASITE = 20;
 
 const router = express.Router();
 
 // Kullanıcıya dönük uç: bisikletin bırakılabileceği bölgeler.
-// Eskiden istasyon listesiydi; BİSİM 2025-08'de sabit istasyonları kaldırdı.
+// Eskiden istasyon listesiydi; BİSİM 2025-08'de sabit istasyonları kaldırmış.
 router.get(["/stations", "/bolgeler"], (req, res) => {
   res.json({
     model: "bolge",
@@ -70,22 +68,15 @@ router.get("/gbfs/station_information", (req, res) => {
     lat:        b.lat,
     lon:        b.lon,
     // Bölgede yuva yoktur; kapasite kavramı da yoktur. Ama OTP alanı
-    // olmayan istasyonu kullanılamaz sayıyor (ölçüldü), bu yüzden nominal
-    // bir değer gönderilir. Kullanıcıya dönük /bisim/stations bu alanı
-    // içermez — uydurma sayı ekranda görünmez.
+    // olmayan istasyonu kullanılamaz sayıyor (ölçüldü), bu yüzden nominal bir değer gönderilir. Kullanıcıya dönük /bisim/stations bu alanı içermez — uydurma sayı ekranda görünmez.
     capacity:   BOLGE_NOMINAL_KAPASITE,
   }));
   res.json({ last_updated: Math.floor(Date.now() / 1000), ttl: 3600, version: "2.3", data: { stations } });
 });
 
 router.get("/gbfs/station_status", (req, res) => {
-  // Bölge modelinde "doluluk" yoktur: bisiklet serbest dolaşır, bölge yalnız
-  // bırakmaya izin verilen alandır. Dolayısıyla eskisi gibi canlı veri
-  // beklemeye gerek yok — bölgenin açık olması işletmecinin tanımıdır.
-  //
-  // Eski model burada is_renting:false gönderiyordu (canlı doluluk yok diye).
-  // Sonucu ölçüldü: OTP'deki 52 istasyonun tamamı allowPickupNow:false idi,
-  // yani hiçbir rotada bisiklet çıkmıyordu.
+  // Bölge modelinde "doluluk" yoktur: bisiklet serbest dolaşır.
+  // Sonucu ölçüldü: OTP'deki 52 istasyonun tamamı allowPickupNow:falsetu,
   const stations = bolgeService.birakmaNoktalari().map((b) => ({
     station_id:          b.id,
     num_bikes_available: BOLGE_NOMINAL_KAPASITE,
@@ -98,13 +89,9 @@ router.get("/gbfs/station_status", (req, res) => {
   res.json({ last_updated: Math.floor(Date.now() / 1000), ttl: 60, version: "2.3", data: { stations } });
 });
 
-// Araç türü. İKİ işi var:
-//
-//  1. AD. Bu feed olmadan OTP serbest araçlara kendi yer tutucusunu veriyor
-//     ve rota kartında bacak "Default vehicle type" diye görünüyordu.
-//  2. return_constraint: "free_floating" — dockless kuralın GBFS'teki
-//     açık beyanı. Bırakma serbestliği geofencing bölgesinden de çıkıyor,
-//     ama iki kaynak birbirini doğruluyor; biri kaybolursa diğeri tutar.
+
+//1. AD. Bu feed olmadan OTP serbest araçlara kendi yer tutucusunu veriyor ve rota kartında bacak "Default vehicle type" diye görünüyordu.
+//2. return_constraint: "free_floating" — dockless kuralın GBFS'teki açık beyanı. Bırakma serbestliği geofencing bölgesinden de çıkıyor, ama iki kaynak birbirini doğruluyor; biri kaybolursa diğeri tutar.
 const ARAC_TURU = "bisim-bisiklet";
 
 router.get("/gbfs/vehicle_types", (req, res) => {
@@ -124,18 +111,7 @@ router.get("/gbfs/vehicle_types", (req, res) => {
   });
 });
 
-// Serbest dolaşan bisikletler. BİSİM'in gerçek modeli budur: bisiklet
-// istasyona bağlı değil, hizmet alanı içinde her yere bırakılır.
-//
-// Bu uç OLMADAN OTP ağı istasyonlu sanıyor ve kiralamayı ancak bir
-// istasyonda bitirebiliyordu. Ölçüm — Konak İskele → Alsancak Garı:
-//   BİSİKLET 12 dk (Konak İskele → Alsancak Kordon) + YÜRÜME 17 dk / 1294 m
-// Yani bisiklet en yakın istasyona bırakılıp kalan 1.3 km yürünüyordu.
-//
-// Konumların nereden geldiği ve neyin varsayım olduğu
-// BisimBolgeService.serbestBisikletler'de yazılı — özeti: canlı bisiklet
-// konumu yayınlanmıyor, noktalar GERÇEK bisiklet yolu geometrisi üzerinde
-// 400 m'de bir örnekleniyor. Bu yüzden kullanıcıya gösterilmezler.
+// Bu uç OLMADAN OTP ağı istasyonlu sanıyor ve kiralamayı ancak bir istasyonda bitirebiliyordu. Ölçüm — Konak İskele → Alsancak Garı
 router.get("/gbfs/free_bike_status", (req, res) => {
   const simdi = Math.floor(Date.now() / 1000);
   res.json({
@@ -160,9 +136,6 @@ router.get("/gbfs/free_bike_status", (req, res) => {
 router.get("/gbfs/geofencing_zones", (req, res) => {
   res.json({
     last_updated: Math.floor(Date.now() / 1000),
-    // ttl'i OTP birebir uyguluyor: 3600 verildiğinde bölge değişikliği bir
-    // saat boyunca alınmıyordu. Bölgeler seyrek değişse de bu kadar uzun
-    // körlük istenmez.
     ttl: 300,
     version: "2.3",
     data: { geofencing_zones: bolgeService.geofencingZones() },
@@ -197,7 +170,6 @@ router.get("/otp-check", asyncHandler(async (req, res) => {
 
 // BICYCLE_RENTAL testi — OtpService ile aynı değişken formatı kullanır (inline enum'dan kaçınır)
 router.get("/otp-rental-test", asyncHandler(async (req, res) => {
-  // Konak Metro BİSİM (38.416539, 27.127547) → Alsancak Garı BİSİM (38.4399489, 27.147847)
   const query = `
     query Plan($dateTime: OffsetDateTime!, $modes: PlanModesInput) {
       planConnection(

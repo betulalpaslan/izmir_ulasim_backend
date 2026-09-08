@@ -15,9 +15,7 @@ beforeEach(() => { jest.clearAllMocks(); jest.spyOn(console, "warn").mockImpleme
 afterEach(() => jest.restoreAllMocks());
 
 describe("asciiye — Türkçe karakter katlaması", () => {
-  // Photon'un indeksi ASCII'ye katlanmış: "güzel" HİÇ sonuç döndürmüyor,
-  // "guzel" Güzelbahçe/Güzelyalı/Güzelyurt'u buluyor. Türkçe klavyeyle yazan
-  // kullanıcı bu yüzden boş liste görüyordu.
+
   test("altı Türkçe harfi de karşılığına çevirir", () => {
     expect(asciiye("güzelbahçe")).toBe("guzelbahce");
     expect(asciiye("çiğli")).toBe("cigli");
@@ -84,8 +82,6 @@ describe("fetchPhoton", () => {
 });
 
 describe("tekrarlariEle", () => {
-  // Aynı yer OSM'de birden çok kayıtla durur (station + tram_stop + building)
-  // ve altı satırlık listeyi tek başına doldurur.
   test("~200 m yakınlıktaki kayıtlar tek sonuç sayılır", () => {
     const r = tekrarlariEle([
       { display_name: "Alsancak Gar", lat: "38.4400", lon: "27.1500" },

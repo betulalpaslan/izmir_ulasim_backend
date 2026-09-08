@@ -2,31 +2,20 @@ const axios = require("axios");
 const fs = require("fs");
 const config = require("../config");
 
-// ─── Overpass erişiminin tek yeri ──────────────────────────────────────
-// Uygulama bu sorguları bir süre doğrudan kendi cihazından çekiyordu.
-// Üç şey kaybediliyordu: 24 saatlik cache, üç mirror denemesi ve disk
-// yedeği. Dördüncüsü daha sinsiydi — Overpass'ın hız sınırı her kullanıcının
-// cihazına ayrı uygulandığı için kalabalık saatte rastgele kullanıcılar
-// boş katman görüyordu. Erişim artık tek bir yerden, tek IP üzerinden.
 
-// Sıra bilinçli: overpass-api.de resmi ama en yüklü sunucu, bu yüzden sonda.
 const OVERPASS_MIRRORS = [
   "https://overpass.openstreetmap.fr/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass-api.de/api/interpreter",
 ];
 
-// Overpass kutu sırası: güney,batı,kuzey,doğu (lat,lon,lat,lon).
-// DİKKAT: Photon/Nominatim bbox'ı batı,güney,doğu,kuzey sırasındadır —
-// aynı sayılar farklı sırayla yazılır, bkz. GeocodingService.
+
 const IZMIR_BBOX = "38.2,26.8,38.6,27.5";
 
-// Süreler config.js'te; buradaki adlar yalnızca okunurluk için.
 const VARSAYILAN_TTL     = config.TTL.OVERPASS;
 const VARSAYILAN_BACKOFF = config.OVERPASS_BACKOFF;
 
-// Her Overpass kaynağı kendi cache'i, kendi backoff'u ve kendi disk yedeğiyle
-// yaşar; biri düşünce diğerleri etkilenmez.
+
 function createOverpassSource({ ad, query, cacheFile, ttlMs = VARSAYILAN_TTL, backoffMs = VARSAYILAN_BACKOFF, timeoutMs = config.TIMEOUT.OVERPASS }) {
   let cache = null;
   let cacheTime = 0;
@@ -57,7 +46,6 @@ function createOverpassSource({ ad, query, cacheFile, ttlMs = VARSAYILAN_TTL, ba
 
     if (cache) return cache; // stale in-memory cache yeterli
 
-    // İlk yükleme ve Overpass yok — build sırasında indirilen yedeğe düş.
     if (cacheFile) {
       try {
         const raw = JSON.parse(fs.readFileSync(cacheFile, "utf8"));
@@ -71,8 +59,6 @@ function createOverpassSource({ ad, query, cacheFile, ttlMs = VARSAYILAN_TTL, ba
       }
     }
 
-    // 502: hata bizde değil, yukarı akışta. İstemci için fark önemli —
-    // 502 "tekrar dene", 500 "burada bir hata var" demektir.
     const err = new Error(`${ad}: veri hiçbir kaynaktan alınamadı`);
     err.status = 502;
     throw err;
@@ -90,9 +76,6 @@ function createOverpassSource({ ad, query, cacheFile, ttlMs = VARSAYILAN_TTL, ba
     };
   }
 
-  // Bellekteki ham veriyi ağ isteği YAPMADAN verir (yoksa null).
-  // Yalnız /health için: "kaç istasyon süzgeçten geçiyor" gibi kaynağa özel
-  // sayıları hesaplayabilmek gerekiyor, ama sağlık ucu Overpass'ı tetiklememeli.
   function peek() {
     return cache;
   }

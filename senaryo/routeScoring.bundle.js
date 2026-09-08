@@ -105,23 +105,21 @@ function formatDuration(seconds) {
 }
 
 /* ── routeScoring.js ── */
-// OTP'den gelen ham güzergâhları puanlar, sıralar, etiketler ve arayüzün
-// beklediği rota nesnesine dönüştürür.
-// Tamamen saf fonksiyonlardır — React veya ağ bağımlılığı yoktur.
-// VAPUR YOK: İzmir GTFS feed'inde vapur seferi bulunmuyor (route_type=4 hiç
-// geçmiyor), backend de FERRY modunu OTP'ye hiç istemiyor. Karşılığı olmayan
-// bir mod için stil tutmak yanıltıcıydı. Feed geldiğinde geri eklenir.
+
+
 const MODE_STYLE = {
-  WALK:           { color: "#7a8299", icon: "walk",  label: "Yürüyüş" },
-  BUS:            { color: "#f97316", icon: "bus",   label: "Otobüs" },
+  WALK:           { color: "#8b8aa8", icon: "walk",  label: "Yürüyüş" },
+  BUS:            { color: "#8b5cf6", icon: "bus",   label: "Otobüs" },
   // RAIL = İZBAN banliyö hattı, SUBWAY = İzmir Metrosu. Aynı ikonu paylaşırlar,
   // bu yüzden renkleri ayrı tutulur; aksi hâlde kart şeridinde ayırt edilemezler.
-  RAIL:           { color: "#4f46e5", icon: "train", label: "Banliyö" },
-  SUBWAY:         { color: "#60a5fa", icon: "train", label: "Metro" },
-  TRAM:           { color: "#a78bfa", icon: "tram",  label: "Tramvay" },
-  BICYCLE:        { color: "#4ade80", icon: "bike",  label: "Bisiklet" },
-  BICYCLE_RENTAL: { color: "#4ade80", icon: "bike",  label: "BİSİM" },
-  CAR:            { color: "#f97316", icon: "car",   label: "Araba" },
+  RAIL:           { color: "#ec4899", icon: "train", label: "Banliyö" },
+  SUBWAY:         { color: "#22a6f0", icon: "train", label: "Metro" },
+  TRAM:           { color: "#f59e0b", icon: "tram",  label: "Tramvay" },
+  BICYCLE:        { color: "#22c55e", icon: "bike",  label: "Bisiklet" },
+  // BİSİM kendi bisikletinden ayrı bir ton: kart şeridinde hangisinin
+  // kiralık olduğu renkten okunsun.
+  BICYCLE_RENTAL: { color: "#10b981", icon: "bike",  label: "BİSİM" },
+  CAR:            { color: "#fb7a3c", icon: "car",   label: "Araba" },
 };
 
 const NON_TRANSIT_MODES = ["WALK", "BICYCLE", "BICYCLE_RENTAL", "CAR"];
@@ -130,16 +128,11 @@ const CARBON_G_PER_KM = {
   CAR: 150, BUS: 80, RAIL: 41, SUBWAY: 41, TRAM: 30,
   WALK: 0, BICYCLE: 0, BICYCLE_RENTAL: 0,
 };
-
-// Skor katsayıları — her mod kendi önceliğini yansıtır
 const SCORING = {
-  // Toplu taşıma: aktarma çok maliyetli (bekleme + yürüyüş), yürüyüş da ağır
-  transit:       { durationMin: 1, walkKm: 7,  transferPts: 10, overTargetKm: 45 },
-  // ESKİ MOD — resolveProfileKey artık bu anahtarı hiç üretmiyor (bisikletin
-  // iki modu da aktarmalı). Tablolardan silinmedi: dışarıdan "bicycle"
-  // geçiren bir çağrı katsayısız kalıp sessizce transit ağırlıklarına
-  // düşerdi. Yeni bir şey eklerken burayı örnek almayın.
-  bicycle:       { durationMin: 1, walkKm: 2,  transferPts:  3, overTargetKm: 15, bikeKm: 1 },
+  
+  transit:       { durationMin: 1, walkKm: 7,  transferPts: 10, overTargetKm: 45, uzunBacakPts: 15 },
+
+  bicycle:       { durationMin: 1, walkKm: 2,  transferPts:  3, overTargetKm: 15, bikeKm: 1, uzunBacakPts: 15 },
   // BİSİM kiralama: istasyona yürüyüş önemli, transit aktarması da sayılır.
   //
   // bikeKm — pedal çevirmenin zahmet cezası. Ölçüm olmadan konmadı;
@@ -153,13 +146,13 @@ const SCORING = {
   //
   // Bu bir CEZA'dır, eski `bikeKmOdul` gibi bir ödül değil: 0'ın altına
   // inemez, dolayısıyla hiçbir güzergâh km biriktirerek zirveye çıkamaz.
-  bicycle_rent:  { durationMin: 1, walkKm: 5,  transferPts:  5, overTargetKm: 25, bikeKm: 1 },
+  bicycle_rent:  { durationMin: 1, walkKm: 5,  transferPts:  5, overTargetKm: 25, bikeKm: 1, uzunBacakPts: 15 },
   // Bisiklet park + transit: park sonrası yürüyüş kritik, aktarma da ağır.
-  bicycle_park:  { durationMin: 1, walkKm: 8,  transferPts:  8, overTargetKm: 40, bikeKm: 1 },
+  bicycle_park:  { durationMin: 1, walkKm: 8,  transferPts:  8, overTargetKm: 40, bikeKm: 1, uzunBacakPts: 15 },
   // Araba: sadece süre, yürüyüş yok
-  car:           { durationMin: 1, walkKm: 0,  transferPts:  0, overTargetKm:  0 },
+  car:           { durationMin: 1, walkKm: 0,  transferPts:  0, overTargetKm:  0, uzunBacakPts: 0 },
   // Park & Ride: yürüyüş orta ağırlık, aktarma önemli
-  park_and_ride: { durationMin: 1, walkKm: 6,  transferPts:  8, overTargetKm: 35 },
+  park_and_ride: { durationMin: 1, walkKm: 6,  transferPts:  8, overTargetKm: 35, uzunBacakPts: 15 },
 };
 
 // ─── Mod amacı ─────────────────────────────────────────────────────────
@@ -205,23 +198,21 @@ const BISIKLET_ASGARI_PAY = 0.15;
 // Eski ad — dışarıda bu sabiti bekleyen kod olabilir.
 const BISIM_ASGARI_PAY = BISIKLET_ASGARI_PAY;
 
-// KENDİ BİSİKLETİNDE ÖLÇÜT FARKLI: kazanç.
+// KENDİ BİSİKLETİNDE ÖLÇÜT: KAYIP TAVANI.
 //
-// Oran eşiği burada yanlış şeyi ölçüyordu. Bisikletin zaten yanındadır,
-// aranacak bir araç ve iade edilecek bir kiralama yoktur; tek soru "bu sürüş
-// beni daha erken vardırıyor mu". Ölçüldü — Narlıdere → Çiğli:
-//   72 dk  bisiklet 6 dk → M1 direkt      (bisiklet payı %8)
-//   81 dk  bisikletsiz en iyi
-// Bisiklet 9 DAKİKA kazandırıyor ama %15 kuralına takılıp eleniyordu ve mod
-// saflığı geldiğinden beri yedeği de olmadığı için kullanıcı boş ekran
-// görüyordu.
+// Önce oran eşiği vardı, yanlış şeyi ölçüyordu. Sonra "en az 3 dakika
+// kazandırmalı" kuralına geçildi — o da yanlış tarafa kaçtı: bisikleti
+// yanında olan biri yarışa çıkmıyor. Ölçümdeki uç örnek Konak → Bornova'da
+// bisikletli güzergâh yolculuğu 0.6 DAKİKA uzatıyordu ve mod tamamen
+// kapanıyordu; kullanıcıya "36 saniye yüzünden bisiklete binemezsin"
+// demek anlamsız.
 //
-// Ters yön de aynı ölçüyle yakalanıyor — asıl derdimiz oydu (Konak →
-// Bornova): 282 metrelik bisiklet bacağı yolculuğu 6.2 dakika UZATIYORDU.
-// Kazanç negatif olduğu için elenir.
+// Kendi bisikletinde aranacak araç, QR, kilit açma, iade yok. Süre tek
+// değer de değil: hareket, ücretsizlik, beklememe, aktarma belirsizliğinin
+// olmaması. Bu yüzden ölçüt kazanç değil KAYIP TAVANI: bisiklet yolculuğu
+// bir miktar uzatabilir, yeter ki uzatma katlanılır olsun.
 //
-// EŞİK NEDEN 3 DAKİKA. On senaryoda bisikletin bisikletsize göre en iyi
-// kazancı ölçüldü ve dağılım ÇİFT TEPELİ çıktı:
+// TAVAN 15 DAKİKA. Ölçülen on senaryoda bisikletin bisikletsize göre farkı:
 //
 //   +23.0  uzak-kuzey          +3.1  korfez-karsi
 //   +10.5  merkez-dogu         +3.1  kuzey-dogu
@@ -229,20 +220,24 @@ const BISIM_ASGARI_PAY = BISIKLET_ASGARI_PAY;
 //    +9.2  narlidere-cigli     +0.8  guneybati-merkez
 //    +9.1  uzak-guney          -9.6  sahil-guneybati
 //
-// Ya 9 dakikanın üstünde, ya 3 dakikanın altında; arada hiçbir şey yok.
-// Bu yüzden 4 ile 8 arasındaki HER eşik aynı sonucu veriyor (5 senaryo) —
-// tek gerçek karar noktası 3 dakika. Orada Konak → Karşıyaka (32 dk
-// bisikletsiz, 29 dk bisikletli, 14 km sürüş) ve Karşıyaka → Bornova geri
-// geliyor; ikisi de "bisiklet işe yaramıyor" denecek yolculuklar değil.
+// Eski 3 dakika eşiği alttaki dördünü (+1.4, +0.8 ve ölçüm sonrası eklenen
+// -0.6, -6.2 gibi küçük kayıplar) eliyordu. 15 dakika tavanıyla bunların
+// hepsi geçer, -9.6'lık sahil-guneybati da geçer; eleme yalnız bisikletin
+// yolculuğu gerçekten çekilmez hale getirdiği durumda kalır.
 //
-// 0'a indirilemez: 0.8 ve 1.4 dakikalık kazançlar ölçüm gürültüsü kadar ve
-// bisikleti çıkarmayı haklı çıkarmıyor.
+// Sıfır tavan (yani "hiç uzatmasın") kuralı eski haline döndürür; sınırsız
+// olması ise modu kuralsız bırakır — 40 dakika uzatan bir güzergâhı
+// "bisikletim + aktarma" diye sunmak yine yalan olur.
 //
 // Taban çizgisi backend'den geliyor (services/OtpService.js, ayrı bir
 // yürüyüşlü sorgu) ve her güzergâha iliştirilmiş halde: itin.bisikletsizEnIyiSn.
 // BİLİNMİYORSA ELEME YAPILMAZ — taban sorgusu düştüyse kullanıcıyı
 // cezalandırmak yanlış olur.
-const BISIKLET_ASGARI_KAZANC_SN = 3 * 60;
+const BISIKLET_AZAMI_KAYIP_SN = 15 * 60;
+
+// P+R'de transitin araca göre asgari oranı. Gerekçesi ve ölçümü aşağıda,
+// MOD_AMACI.park_and_ride'ın üstünde.
+const PR_TRANSIT_ASGARI_ORAN = 0.3;
 
 const MOD_AMACI = {
   bicycle_rent: {
@@ -252,11 +247,11 @@ const MOD_AMACI = {
       o.bikeSaniye >= o.duration * BISIKLET_ASGARI_PAY,
   },
   bicycle_park: {
-    aciklama: "Bisikletim + aktarma seçildi — bisiklet yolculuğu belirgin kısaltmalı",
+    aciklama: "Bisikletim + aktarma seçildi — bisiklet yolculuğu aşırı uzatmamalı",
     gorur: (o) =>
       o.bikeMeters >= (BIKE_LEG_MIN.bicycle_park ?? 0) &&
       (o.bisikletsizEnIyiSn == null ||
-        o.duration <= o.bisikletsizEnIyiSn - BISIKLET_ASGARI_KAZANC_SN),
+        o.duration <= o.bisikletsizEnIyiSn + BISIKLET_AZAMI_KAYIP_SN),
   },
   // "Sadece bisiklet" modu ölçüldüğünde 8 güzergâhın 7'sinde HİÇ bisiklet
   // yoktu — düz transit rotalarıydı, yani mod kullanıcıya yalan söylüyordu.
@@ -266,9 +261,55 @@ const MOD_AMACI = {
   },
   // Park & Ride ölçümü: 10 senaryonun 6'sında araç 13–29 km, transit 0.3–1.8 km.
   // Bu bir "park et ve devam et" yolculuğu değil, araba yolculuğudur.
+  //
+  // ESKİ KURAL `carMeters >= 2000` DE İSTİYORDU ve o yarı sahte negatif
+  // üretiyordu. Yukarıdaki ölçüm araç-domine vakalarını anlatıyor; araç TABANI
+  // hiç ölçülmemiş, simetri olsun diye konmuştu. Bedeli — Karşıyaka → Bornova,
+  // Pzt 08:00, beş güzergâh:
+  //
+  //   [1] 29 dk | araç 13.9 km → BORNOVA KATLI    | transit  0.6 km
+  //   [2] 55 dk | araç  1.1 km → KARŞIYAKA İSKELE | transit 10.9 km
+  //   [3] 53 dk | araç  1.1 km → KARŞIYAKA İSKELE | transit 14.2 km
+  //   [4] 58 dk | araç  1.1 km → KARŞIYAKA İSKELE | transit  8.6 km
+  //   [5] 61 dk | araç  1.1 km → KARŞIYAKA İSKELE | transit 11.6 km
+  //
+  // [2]–[5] tam olarak Park & Ride'ın kendisi: kısa bir sürüşle otoparka git,
+  // gerisini transitle yap. Dördü de "araç 2 km'den kısa" diye eleniyordu ve
+  // kullanıcı boş ekran görüyordu. Kısa sürüş kusur değil, modun iyi
+  // çalıştığının işaretidir.
+  //
+  // Doğru soru "araba ne kadar uzun" değil, YOLCULUĞU KİM TAŞIYOR. Oran
+  // kendini ölçekler ve mutlak bir tabana ihtiyaç bırakmaz.
+  //
+  // EŞİK NEDEN 0.3. Önce `transit >= araç` (oran 1.0) denendi ve boş satırı
+  // 5'ten 4'e indirdi — ama DOLU satırlara da zarar verdi: Alsancak → Balçova'da
+  // 33 dakikalık gerçek bir P+R (9.0 km araç + 4.3 km transit) elenip öneri
+  // 51 dakikaya çıktı, Narlıdere → Çiğli'de bir güzergâh 14.6'ya karşı 14.4 km
+  // ile, yani 200 METRE farkla düştü. Bıçak sırtıydı.
+  //
+  // transit≥2km olan 30 güzergâhın transit/araç oranı sıralandığında dağılım
+  // alttan ayrık çıktı:
+  //
+  //   0.08  uzak-kuzey     araç 28.8 km, transit  2.3 km
+  //   0.17  kuzey-merkez   araç 13.7 km, transit  2.3 km
+  //   ──── boşluk 0.22 ────
+  //   0.38  sahil-guneybati araç 9.0 km, transit  3.5 km
+  //   0.48  sahil-guneybati araç 9.0 km, transit  4.3 km   ← 33 dk'lık kart
+  //   ──── boşluk 0.50 ────
+  //   0.99 … 69.86  (kalan 25 güzergâh)
+  //
+  // Alttaki ikisi 28.8 ve 13.7 km sürüp 2.3 km transit yapıyor — kuralın
+  // hedeflediği araba yolculuğu tam olarak bu. Üstündeki her şey gerçek karma
+  // yolculuk. 0.17 ile 0.38 arasındaki HER eşik aynı sonucu verir; 0.3
+  // boşluğun ortasıdır.
+  //
+  // Sonuç: boş satır 5'ten 4'e iner (kuzey-dogu ve guney-merkez açılır,
+  // uzak-kuzey kapanır) ve dolu satırlarda hiçbir hızlı kart kaybolmaz.
   park_and_ride: {
-    aciklama: "Park & Ride seçildi — hem araç hem transit anlamlı olmalı",
-    gorur: (o) => o.carMeters >= 2000 && o.transitMeters >= 2000,
+    aciklama: "Park & Ride seçildi — yolculuğu transit taşımalı, araba erişim aracı olmalı",
+    gorur: (o) =>
+      o.transitMeters >= 2000 &&
+      o.transitMeters >= o.carMeters * PR_TRANSIT_ASGARI_ORAN,
   },
 };
 
@@ -386,12 +427,17 @@ function calcCarbonGrams(legs) {
   }, 0);
 }
 
-function rankItineraries(itineraries, profileKey) {
+// Güzergâh başına ölçüm + skor. `rankItineraries` ve `modBosSebebi` AYNI
+// sayılara bakmak zorunda: biri neyin elendiğine, diğeri niçin elendiğine
+// karar veriyor. İkinci bir kopya tutmak kaçınılmaz olarak ayrışır — bu
+// depoda bir kez oldu (web arayüzünün kendi puanlama kopyası aylarca eski
+// eşiklerle çalıştı, bkz. senaryo/derle.js'in başındaki not).
+function puanla(itineraries, profileKey) {
   const w = SCORING[profileKey] || SCORING.transit;
   const maxWalk = WALK_LEG_TARGET[profileKey] ?? 2000;
   const minBike = BIKE_LEG_MIN[profileKey] ?? 0;
 
-  const scored = itineraries
+  return itineraries
     .map((itin) => {
       const walkLegs = itin.legs.filter((l) => l.mode === "WALK");
       const walkDistances = walkLegs.map(calcLegDistanceMeters);
@@ -425,58 +471,199 @@ function rankItineraries(itineraries, profileKey) {
       // çağıranın (mobil, web demo, web arayüzü) ekstra bir şey geçirmesi
       // gerekmiyor ve üçü de aynı kuralı otomatik alıyor.
       const bisikletsizEnIyiSn = itin.bisikletsizEnIyiSn ?? null;
+      // Aynı ölçüm, nötr adıyla: artık P+R de istiyor (eleme için değil,
+      // çıkış teklifi için). Eski ad bisiklet modlarında dolu geldiği için
+      // yedek olarak okunuyor.
+      const duzTransitEnIyiSn = itin.duzTransitEnIyiSn ?? bisikletsizEnIyiSn;
       const amacaUygun = amac
         ? amac.gorur({ bikeMeters, bikeSaniye, carMeters, transitMeters, duration, bisikletsizEnIyiSn })
         : true;
       // Hiçbir modda kabul edilemez yürüyüş: tek bacakta 20 dakikadan uzun.
       const yuruyusSacma = maxWalkSec > YURUYUS_BACAK_TAVANI_SN;
+      // Tek bacakta yürüyüş, TAVANA yaklaştıkça hızlanarak cezalanır.
+      //
+      // Doğrusal ceza tavanın hemen altını korumuyordu: 19 dakikalık bir bacak
+      // tavana takılmadan geçiyor ve birkaç dakikalık süre avantajıyla listenin
+      // başına çıkabiliyordu. Karesel terim aynı farkı üstte çok daha pahalı
+      // yapar — oran tavanın kesridir, yani 1.0 tam tavandır:
+      //   5 dk → 0.06·k   10 dk → 0.25·k   15 dk → 0.56·k   19 dk → 0.90·k
+      //
+      // overTargetKm'den farkı BİRİM ve REFERANS: o MODUN konfor hedefine
+      // (metre) göre ölçer, bu HERKESİN tavanına (dakika) göre. Aynı şeyi iki
+      // kez saymazlar; tavanın süre tabanlı olması da ölçümle seçilmişti
+      // (bkz. YURUYUS_BACAK_TAVANI_SN'nin üstündeki not).
+      const tavanOrani = maxWalkSec / YURUYUS_BACAK_TAVANI_SN;
       const score =
         (duration / 60) * w.durationMin +
         (total / 1000) * w.walkKm +
         transfers * w.transferPts +
         (overTarget / 1000) * w.overTargetKm +
+        tavanOrani * tavanOrani * (w.uzunBacakPts ?? 0) +
         (bikeMeters / 1000) * (w.bikeKm ?? 0);
       return {
         itin,
         walk: {
           total, maxLeg, maxWalkSec, overTarget, transfers, duration,
           bikeMeters, bikeSaniye, carMeters, transitMeters,
-          bisikletAnlamsiz, amacaUygun, yuruyusSacma,
+          bisikletAnlamsiz, amacaUygun, yuruyusSacma, duzTransitEnIyiSn,
         },
         score,
       };
     })
     .sort((a, b) => a.score - b.score);
+}
 
-  // Sert eleme yalnız iki gerekçeyle: güzergâh seçilen modun işini görmüyor,
-  // ya da hiçbir modda savunulamayacak kadar çok yürütüyor.
-  //
-  // WALK_LEG_TARGET burada ARTIK ELEMİYOR; skorda `overTargetKm` cezası
-  // olarak yaşıyor. Sert eşik olduğunda 1250 m'lik bacak 1200 m sınırına
-  // 50 metre takılıp kullanıcının tam istediği güzergâhı siliyordu.
-  const filtered = scored.filter(
-    (r) => r.walk.amacaUygun && !r.walk.bisikletAnlamsiz && !r.walk.yuruyusSacma
-  );
-  if (filtered.length > 0) return oneriSinirinaUydur(ayniHattiTekilleştir(filtered), profileKey);
+function rankItineraries(itineraries, profileKey) {
+  const scored = puanla(itineraries, profileKey);
 
-  // ── Geriye hiçbir şey kalmadıysa ──
+  // ── Eleme: iki gerekçe, İKİ FARKLI SONUÇ ────────────────────────────
   //
-  // MOD_AMACI tanımlı modlarda (bisiklet ve P+R) SON ÇARE KARTI YOK.
-  // Eskiden burada "boş ekran gösterme" diye en iyi aday tek başına
-  // döndürülüyordu ve bu, kuralı sessizce geçersiz kılıyordu: "BİSİM +
-  // Aktarma" seçen kullanıcı, elenmiş olan 4 dakikalık BİSİM güzergâhını
-  // yine görüyordu — üstelik alternatifsiz.
+  // Bu ikisi eskiden tek süzgeçte toplanıyordu ve ikisi de aynı sonuca —
+  // boş ekrana — çıkıyordu. Oysa farklı türden şeyler:
   //
-  // Mod seçimi bir vaattir. Tutulamıyorsa doğru yanıt, vaadi karşılamayan
-  // bir kartı yine göstermek değil, tutulamadığını söylemektir; arayüz
-  // sebebini yazar ve diğer modlar bir dokunuş uzakta
-  // (bkz. hooks/useRouteSearch.js).
+  //   MOD AMACI bir VAAT'tir. "BİSİM + aktarma" seçen kullanıcıya BİSİM'siz
+  //   bir kart göstermek vaadi bozar; doğru yanıt vaadin tutulamadığını
+  //   söylemektir. Bu ölçümle alınmış bir karardır ve DEĞİŞMİYOR.
   //
-  // Amacı olmayan modlarda (düz transit, araba) eski davranış korunur:
-  // orada eleme yalnız yürüyüş tavanından gelir ve gösterilecek en iyi
-  // aday hâlâ o modun işini görüyordur.
-  if (MOD_AMACI[profileKey]) return [];
-  return scored.filter((r) => !r.walk.yuruyusSacma).slice(0, 1);
+  //   YÜRÜYÜŞ TAVANI bir TERCİH sınırıdır, fizik değil. Bazı yolculuklarda
+  //   20 dakikanın altında yürüyen güzergâh gerçekten yoktur. Orada boş
+  //   ekran kullanıcıya yardım etmiyor: yürümek zorunlu olduğunda kural
+  //   "gösterme" değil "en az yürüteni göster ve zorunlu olduğunu söyle"
+  //   olmalı.
+  //
+  // WALK_LEG_TARGET burada ELEMİYOR; skorda `overTargetKm` cezası olarak
+  // yaşıyor. Sert eşik olduğunda 1250 m'lik bacak 1200 m sınırına 50 metre
+  // takılıp kullanıcının tam istediği güzergâhı siliyordu.
+  const amaciGoren = scored.filter((r) => r.walk.amacaUygun && !r.walk.bisikletAnlamsiz);
+
+  // KATMAN 1 — tavana da uyanlar. Varsa yalnız bunlar gösterilir; bu,
+  // değişiklikten önceki davranışın birebir aynısıdır.
+  const tavanaUyan = amaciGoren.filter((r) => !r.walk.yuruyusSacma);
+  if (tavanaUyan.length > 0) {
+    return oneriSinirinaUydur(ayniHattiTekilleştir(tavanaUyan), profileKey);
+  }
+
+  // KATMAN 2 — mod işini görüyor ama tavanın altında yürüyen tek güzergâh
+  // yok. Sıra `score`'dan gelir: yukarıdaki karesel ceza uzun bacağı zaten
+  // geriye itiyor, ikinci bir sıralama kuralı koymak aynı işi iki ayrı
+  // mekanizmaya bölerdi.
+  //
+  // oneriSinirinaUydur BURADA UYGULANMAZ: o, listenin başını SÜREYE göre
+  // düzeltiyor ve az yürüteni öne alma amacını bozardı.
+  if (amaciGoren.length > 0) {
+    return ayniHattiTekilleştir(amaciGoren).map((r) => ({ ...r, yuruyusZorunlu: true }));
+  }
+
+  // Mod amacı hiçbir adayı geçirmedi. Son çare kartı YOK — arayüz sebebini
+  // yazar ve diğer modlar bir dokunuş uzakta (bkz. modBosSebebi).
+  return [];
+}
+
+// ─── Liste boş kaldığında: NİÇİN? ──────────────────────────────────────
+// `rankItineraries` boş dönerse mod bu yolculukta işini göremiyor demektir.
+// Bu meşru bir sonuç ama tek başına çıkmaz sokak: kullanıcı boş bir ekran ve
+// genel bir cümle görüyor, sebebi bilmediği için aynı aramayı tekrarlıyordu.
+//
+// Burada sebep ÖLÇÜLMÜŞ sayılarla söylenir ve varsa çıkış teklifinin süresi
+// döndürülür. Sayı yoksa (taban sorgusu düştüyse) `alternatifSn` null kalır
+// ve arayüz teklifi hiç göstermez — uydurmaz.
+//
+// Dönen: { kod, mesaj, alternatifSn }
+function modBosSebebi(itineraries, profileKey) {
+  const bos = { kod: "bilinmiyor", mesaj: null, alternatifSn: null };
+  if (!itineraries?.length) return bos;
+
+  const scored = puanla(itineraries, profileKey);
+  const alternatifSn = scored[0].walk.duzTransitEnIyiSn ?? null;
+  const dk = (sn) => (sn / 60).toFixed(1).replace(".0", "");
+  const km = (m) => (m / 1000).toFixed(1);
+
+  if (profileKey === "park_and_ride") {
+    // Yolculuğun kendisi kuralın transit tabanından kısaysa mod YAPISAL olarak
+    // uygulanamaz — "işe yaramadı" demek yanlış olur, hiçbir eşik bunu
+    // değiştiremez. Uçlar ilk bacağın çıkışı ve son bacağın varışı.
+    const ilk = itineraries[0].legs[0]?.from;
+    const son = itineraries[0].legs[itineraries[0].legs.length - 1]?.to;
+    // haversineMeters {latitude, longitude} alır; OTP bacakları lat/lon
+    // veriyor, çevirmek gerekiyor.
+    const kusUcusu =
+      ilk?.lat != null && son?.lat != null
+        ? haversineMeters(
+            { latitude: ilk.lat, longitude: ilk.lon },
+            { latitude: son.lat, longitude: son.lon }
+          )
+        : null;
+    if (kusUcusu != null && Number.isFinite(kusUcusu) && kusUcusu < 2000) {
+      return {
+        kod: "kisa-mesafe",
+        mesaj: `Bu mesafe için Park & Ride anlamlı değil — yolculuk zaten ${km(kusUcusu)} km.`,
+        alternatifSn,
+      };
+    }
+    // Aracın yolculuğu yuttuğu durum: en çok transit yapan adayın sayıları
+    // gösterilir, çünkü kullanıcıya "en iyi ihtimalle bu" demek gerekiyor.
+    const enIyi = scored.reduce((a, b) =>
+      b.walk.transitMeters > a.walk.transitMeters ? b : a);
+    return {
+      kod: "arac-domine",
+      mesaj: `Araç ${km(enIyi.walk.carMeters)} km, toplu taşıma ${km(enIyi.walk.transitMeters)} km — ` +
+             "bu bir araba yolculuğu, park + aktarma değil.",
+      alternatifSn,
+    };
+  }
+
+  if (profileKey === "bicycle_park") {
+    const esik = BIKE_LEG_MIN.bicycle_park ?? 0;
+    const enUzunBisiklet = Math.max(...scored.map((r) => r.walk.bikeMeters));
+    if (enUzunBisiklet < esik) {
+      return {
+        kod: "bisiklet-kisa",
+        mesaj: `En uzun bisiklet bacağı ${Math.round(enUzunBisiklet)} m (eşik ${esik} m) — ` +
+               "bu kadar kısa bir sürüş için bisikleti çıkarmaya değmez.",
+        alternatifSn,
+      };
+    }
+    // Kazanç: bisikletsiz en iyiye göre ne kadar erken varıyoruz.
+    const taban = scored[0].walk.duzTransitEnIyiSn;
+    if (taban != null) {
+      const kazanc = taban - Math.min(...scored.map((r) => r.walk.duration));
+      // Artık yalnız TAVANI AŞAN uzatma eler. Küçük kayıplar mod açıkken
+      // gösterilir, dolayısıyla buraya ancak gerçekten uzun bir uzatmayla
+      // gelinir; sayıyı ve sınırı birlikte söylemek gerekiyor.
+      if (kazanc < -BISIKLET_AZAMI_KAYIP_SN) {
+        return { kod: "bisiklet-yavas",
+                 mesaj: `Bisiklet bu yolculuğu ${dk(-kazanc)} dk uzatıyor ` +
+                        `(kabul sınırı ${dk(BISIKLET_AZAMI_KAYIP_SN)} dk).`, alternatifSn };
+      }
+      // Buraya düşmek elemenin kazanç ölçütünden GELMEDİĞİ anlamına gelir.
+      return { ...bos, kod: "bisiklet-katkisiz", alternatifSn };
+    }
+    return { ...bos, kod: "bisiklet-katkisiz", alternatifSn };
+  }
+
+  if (profileKey === "bicycle_rent") {
+    const esik = BIKE_LEG_MIN.bicycle_rent ?? 0;
+    const enUzun = Math.max(...scored.map((r) => r.walk.bikeMeters));
+    if (enUzun < esik) {
+      return {
+        kod: "bisim-kisa",
+        mesaj: `En uzun BİSİM bacağı ${Math.round(enUzun)} m (eşik ${esik} m) — ` +
+               "bu kadar kısa bir sürüş için bisiklet almaya değmez.",
+        alternatifSn,
+      };
+    }
+    const enIyiPay = Math.max(...scored.map((r) =>
+      r.walk.duration ? r.walk.bikeSaniye / r.walk.duration : 0));
+    return {
+      kod: "bisim-payi-dusuk",
+      mesaj: `BİSİM sürüşü yolculuğun yalnız %${Math.round(enIyiPay * 100)}'i ` +
+             `(eşik %${Math.round(BISIKLET_ASGARI_PAY * 100)}) — o kadar yoldan sonra ` +
+             "bisiklet aramaya değmiyor.",
+      alternatifSn,
+    };
+  }
+
+  return { ...bos, alternatifSn };
 }
 
 // Aynı hattın ardışık kalkışlarını teke indirir.
@@ -550,17 +737,21 @@ function oneriSinirinaUydur(ranked, profileKey) {
 // Eskiden hangi modda hangi etiketin olacağı elle yazılıydı ve bu tablo
 // hata kaynağıydı: "Çevreci" bisiklet modlarında unutulmuştu, oysa ölçüldü
 // ki en ayırt edici etiket orada — bicycle_rent 4/4, bicycle_park 6/7
-// senaryoda Önerilen'den farklı bir güzergâh gösteriyordu. "En Ucuz" ise
-// hiçbir modda yoktu; transit'te 9/9 ayırt ediyor.
+// senaryoda Önerilen'den farklı bir güzergâh gösteriyordu.
 //
 // Artık liste tek: eleme ölçümle yapılıyor. Bir modda aktarma hep 0 ise
-// "Az Aktarma" kendiliğinden çıkmaz; ücret düz tarifeyse (İzmirim Kart,
-// 90 dk aktarma dahil) "En Ucuz" kendiliğinden çıkmaz.
+// "Az Aktarma" kendiliğinden çıkmaz.
+//
+// "EN UCUZ" KALDIRILDI. Ücret bilgisi kartta durmaya devam ediyor; kaldırılan
+// yalnız "bu güzergâh en ucuzu" ETİKETİ ve webdeki aynı adlı sıralama
+// seçeneği. Etiketin dayandığı hesap eksikti: yalnız toplu taşıma ücretini
+// sayıyor, BİSİM kiralama bedelini ve P+R'de otopark ücretini hiç görmüyordu
+// — yani bisiklet ve araba modlarında "en ucuz" dediği şey ölçülmemiş bir
+// iddiaydı. Tarifeler modellenirse ölçümle geri getirilebilir.
 const ADAY_OLCULERI = [
   { tag: "Önerilen",   tagColor: "#60a5fa", olcu: null },   // sıralamanın birincisi
   { tag: "En Hızlı",   tagColor: "#f59e0b", olcu: (c) => c.walk.duration },
   { tag: "Az Aktarma", tagColor: "#a78bfa", olcu: (c) => c.walk.transfers },
-  { tag: "En Ucuz",    tagColor: "#38bdf8", olcu: (c) => c.ucret },
   { tag: "Çevreci",    tagColor: "#34d399", olcu: (c) => c.carbon },
 ];
 
@@ -603,17 +794,15 @@ function candidateKey(itin, walk) {
   return `${Math.round(walk.duration)}_${Math.round(walk.total)}_${lines}`;
 }
 
-function selectCandidates(ranked, profileKey, fareBase = 0, farePerBoarding = false) {
+// Ücret parametreleri KALDIRILDI: tek kullanıcıları "En Ucuz" etiketiydi.
+// Kartta gösterilen ücreti buildRouteResult hesaplıyor, o hâlâ tarifeyi alıyor.
+function selectCandidates(ranked, profileKey) {
+  // `ucret` burada hesaplanıyordu; tek tüketicisi "En Ucuz" etiketiydi ve o
+  // kaldırıldı (bkz. ADAY_OLCULERI). Kartta gösterilen ücret buradan değil
+  // buildRouteResult'tan geliyor, o yerinde duruyor.
   const withCarbon = ranked.map((r) => ({
     ...r,
     carbon: calcCarbonGrams(r.itin.legs),
-    // DİKKAT: BİSİM'in kendi kiralama ücreti bu hesapta YOK — yalnız toplu
-    // taşıma ücreti sayılıyor. Bisiklet modlarında "En Ucuz" bu yüzden
-    // eksik bilgiyle çalışır; BİSİM tarifesi modellenince buraya eklenmeli.
-    ucret: calcJourneyFare(
-      r.itin.legs.filter((l) => !NON_TRANSIT_MODES.includes(l.mode)).length,
-      fareBase, farePerBoarding
-    ),
   }));
   const maxRoutes = MAX_ROUTES[profileKey] ?? 5;
 
@@ -667,7 +856,71 @@ function selectCandidates(ranked, profileKey, fareBase = 0, farePerBoarding = fa
   return result;
 }
 
-// Yolculuk ücreti.
+// ─── ÜCRET: TARİFELER ──────────────────────────────────────────────────
+// TARİFE TEK YERDE. Aynı rakamlar daha önce üç yerde ayrı ayrı yazılıydı
+// (mobil SettingsScreen, mobil OnBoardingScreen, web index.html) ve
+// birbirini tutmuyordu: onboarding "Yetişkin 25,00 ₺" derken ayarlar aynı
+// bilete 35,00 ₺ diyordu. Tarife veridir, arayüz değil — üç ekran da
+// buradan okur.
+//
+// İzmirim Kart'ta 90 dakika içindeki aktarmalar tek ücrete dahildir.
+// Kredi/banka kartında aktarma hakkı yoktur, her biniş ayrı ücretlenir —
+// `perBoarding` bunu ayırt eder.
+const BILET_TARIFESI = [
+  { id: "tam",        ad: "Tam",                 base: 35,   perBoarding: false, aciklama: "İzmirim Kart · 90 dk aktarma dahil" },
+  { id: "genc",       ad: "Genç Kart (Öğrenci)", base: 17.5, perBoarding: false, aciklama: "7-25 yaş · 90 dk aktarma dahil" },
+  { id: "ogretmen",   ad: "Öğretmen Kartı",      base: 23.5, perBoarding: false, aciklama: "İzmirim Kart · 90 dk aktarma dahil" },
+  { id: "yas60",      ad: "60 Yaş Kartı",        base: 29,   perBoarding: false, aciklama: "İzmirim Kart · 90 dk aktarma dahil" },
+  { id: "kredikarti", ad: "Kredi / Banka Kartı", base: 39,   perBoarding: true,  aciklama: "Her binişte ayrı ücret · aktarma hakkı yok" },
+];
+
+const VARSAYILAN_BILET = "tam";
+
+function biletTarifesi(id) {
+  return BILET_TARIFESI.find((b) => b.id === id) || BILET_TARIFESI[0];
+}
+
+// BİSİM — Standart Bisiklet.
+//
+// Açılış bloğu ilk 5 dakikayı KAPSAR, üstüne eklenmez: 5 dakika 10,00 TL,
+// 6. dakika 11,50 TL. Yayımlanan "1 saat 92,50 TL" bunu doğruluyor
+// (10 + 55 × 1,50 = 92,50); açılış bedelinin üstüne 60 dakika daha
+// sayılsaydı 100,00 TL çıkardı.
+const BISIM_TARIFESI = {
+  acilisDakika: 5,
+  acilisUcreti: 10,
+  dakikaUcreti: 1.5,
+  // Kiralamada karttan çekilen ön provizyon. Yolculuğun MALİYETİ DEĞİL:
+  // bloke edilir ve iade edilir. Bu yüzden toplama girmiyor, ayrı bir not
+  // olarak taşınıyor — toplama eklemek 10 dakikalık bir sürüşü dört katı
+  // pahalı gösterirdi.
+  provizyon: 47.5,
+};
+
+// Başlanan dakika ücretlendirilir (Math.ceil): kiralama sistemleri
+// dakikanın altını bölmez.
+function calcBisimFare(saniye) {
+  if (!saniye || saniye <= 0) return 0;
+  const dk = Math.ceil(saniye / 60);
+  const { acilisDakika, acilisUcreti, dakikaUcreti } = BISIM_TARIFESI;
+  if (dk <= acilisDakika) return acilisUcreti;
+  return acilisUcreti + (dk - acilisDakika) * dakikaUcreti;
+}
+
+// Kuruş kalıntısını temizler: 1,5 × 3 gibi çarpımlar kayan noktada
+// 4.499999999999999 üretebiliyor.
+function kurusYuvarla(tutar) {
+  return Math.round(tutar * 100) / 100;
+}
+
+// Ekranda gösterilecek biçim — Türkçe ondalık ayracı virgül, tam sayı
+// tutarlarda kuruş yazılmaz (35 ₺, 17,50 ₺).
+function ucretYazi(tutar) {
+  const v = kurusYuvarla(tutar);
+  return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(".", ",");
+}
+
+// Toplu taşıma bileti.
 // Kredi/banka kartı: 90 dk aktarma hakkı yok → her biniş ayrı ücret
 // İzmirim Kart: 90 dk içinde aktarmalar dahil → yolculuk başı sabit ücret
 function calcJourneyFare(transitLegCount, fareBase, farePerBoarding) {
@@ -676,7 +929,7 @@ function calcJourneyFare(transitLegCount, fareBase, farePerBoarding) {
 }
 
 function buildRouteResult(candidate, fareBase, farePerBoarding, profileKey) {
-  const { itin, walk, tag, tagColor, carbon, etiketler } = candidate;
+  const { itin, walk, tag, tagColor, carbon, etiketler, yuruyusZorunlu } = candidate;
 
   // Park noktası: ardından transit/yürüyüş gelen vehicle leg'in varışı.
   //
@@ -728,20 +981,56 @@ function buildRouteResult(candidate, fareBase, farePerBoarding, profileKey) {
     .reduce((s, l) => s + l.distanceMeters, 0);
 
   const transitLegs = legs.filter((l) => !NON_TRANSIT_MODES.includes(l.mode));
+
+  // ÜCRET İKİ KALEMDİR. Toplu taşıma bileti BİSİM kiralamasını kapsamıyor;
+  // kart eskiden yalnız bileti yazdığı için BİSİM modunda gösterilen rakam
+  // gerçeğin altındaydı — 40 dakikalık bir sürüşte 35,00 TL yazıyordu,
+  // gerçekte 35,00 + 62,50 = 97,50 TL.
+  const bisimSaniye = legs
+    .filter((l) => l.mode === "BICYCLE_RENTAL")
+    .reduce((s, l) => s + l.duration, 0);
+  const bisimUcreti  = calcBisimFare(bisimSaniye);
+  const biletUcreti  = calcJourneyFare(transitLegs.length, fareBase, farePerBoarding);
+
   const maxWalk = WALK_LEG_TARGET[profileKey] ?? 2000;
-  const walkWarning =
-    walk.maxLeg > maxWalk
+  // İki ayrı uyarı, iki ayrı şey. "Hedefin üstünde" bir konfor notudur;
+  // "zorunlu" ise kuralın istisnaya düştüğünü söyler — kullanıcı 20 dakikadan
+  // uzun yürüyen bir kart görüyorsa bunun neden gösterildiğini bilmeli, yoksa
+  // tavanın sessizce kaldırıldığını sanır.
+  const walkWarning = yuruyusZorunlu
+    ? `Bu yolculukta tek seferde en az ${Math.round(walk.maxWalkSec / 60)} dk yürümek ` +
+      "gerekiyor — daha az yürüten güzergâh yok."
+    : walk.maxLeg > maxWalk
       ? `Bu rotada tek seferde ${(walk.maxLeg / 1000).toFixed(1)} km yürüyüş var.`
       : null;
 
   return {
+    // Kartın KİMLİĞİ. Liste sırası bir kimlik değil: rota kartlarına
+    // "süreye göre sırala" gibi bir seçenek eklendiği gün `key={i}` açık
+    // duran kartı yanlış rotanın üstünde bırakırdı — React elemanı
+    // sırasıyla tanıyor. Aynı anahtar zaten adayları teklemek için
+    // üretiliyordu.
+    kimlik: candidateKey(itin, walk),
     legs,
     totalDuration,
     transfers: Math.max(0, transitLegs.length - 1),
     totalDistance: (totalDistance / 1000).toFixed(1),
     walkDistance: (walkDistance / 1000).toFixed(1),
     walkWarning,
-    cost: Math.round(calcJourneyFare(transitLegs.length, fareBase, farePerBoarding)),
+    // Arayüz bunu liste düzeyinde de kullanır (bkz. hooks/useRouteSearch.js):
+    // TÜM kartlar zorunluysa listenin başına ayrı bir bilgi satırı yazılır.
+    yuruyusZorunlu: !!yuruyusZorunlu,
+    cost: kurusYuvarla(biletUcreti + bisimUcreti),
+    // Kalemler ayrı taşınıyor: arayüz "35,00 + BİSİM 62,50" diye dökebilsin,
+    // toplamı yeniden hesaplamak zorunda kalmasın.
+    ucretDetay: {
+      bilet: kurusYuvarla(biletUcreti),
+      bisim: kurusYuvarla(bisimUcreti),
+      bisimDakika: bisimSaniye > 0 ? Math.ceil(bisimSaniye / 60) : 0,
+      // Provizyon toplama DAHİL DEĞİL (bkz. BISIM_TARIFESI); yalnız BİSİM
+      // içeren yolculukta gösterilir.
+      provizyon: bisimSaniye > 0 ? BISIM_TARIFESI.provizyon : 0,
+    },
     tag,
     tagColor,
     carbonGrams: Math.round(carbon),
@@ -753,24 +1042,6 @@ function buildRouteResult(candidate, fareBase, farePerBoarding, profileKey) {
 }
 
 /* ── routeInstructions.js ── */
-// Bacak metinleri. Kullanıcı burada bir VERİ SATIRI değil, YAPILACAK İŞ
-// okumalı: "Alsancak Gar → Çiğli İtfaiye" değil, "912 hattına Alsancak
-// Gar'dan bin · Çiğli İtfaiye'de in".
-//
-// Yer adları OTP'den geldiği gibi cümleye konamıyor. Üç tuzak var, üçü de
-// ekranda görüldü:
-//   • "from" / "to" — sorguya koyduğumuz etiketlerdi ve kartta
-//     "from → Asmaaltı" diye çıkıyordu. Etiketler backend'de "Başlangıç" /
-//     "Varış" olarak düzeltildi, ama ikisi de bir YER ADI değil; cümleye
-//     konursa "Varış noktasına yürü" gibi boş bir metin çıkar.
-//   • "unknown" — OTP'nin adsız düğüm karşılığı
-//   • "BİSİM bisikleti" — serbest kiralık aracın adı; yer değil, araç
-//
-// Bacak tek başına yeterli bağlam taşımıyor, bu yüzden fonksiyon TÜM
-// listeyi görüyor: bir yürüyüşün anlamı ardından geleni, bisikletin park
-// edilip edilmediği ise transitten SONRA bisikletin devam edip etmediğini
-// bilmeyi gerektiriyor.
-
 const TRANSIT_MODES = ["BUS", "RAIL", "SUBWAY", "TRAM"];   // vapur yok — bkz. routeScoring
 const BISIKLET_MODLARI = ["BICYCLE", "BICYCLE_RENTAL"];
 
@@ -783,14 +1054,41 @@ function yer(ad) {
 
 const dk = (leg) => `${Math.max(1, Math.round((leg.duration || 0) / 60))} dk`;
 
-function getLegInstruction(leg, legs = null, index = -1) {
+// Yolculuğun UÇLARI dışarıdan verilir. Sebep: OTP'ye gönderilen uç etiketleri
+// "Başlangıç"/"Varış" (bkz. backend OtpService.js planConnection) ve `yer()`
+// onları yer adı saymıyor — haklı olarak, çünkü yer adı değiller. Sonuç, son
+// adımın "Varışa yürü" demesiydi: kullanıcının aradığı "Karşıyaka İskele"
+// ekranda hiç geçmiyordu. Uçları bilen tek katman arayüz (kullanıcının
+// yazdığı/seçtiği ad orada), o yüzden buraya parametreyle iner.
+// Bacağın İKİ UCU, adlarıyla. Ayrı durmasının sebebi: arayüzler adımı iki
+// ayrı biçimde gösteriyor — biri eylem cümlesi ("Poligon durağına yürü"),
+// öbürü akış satırı ("Konak Meydanı → Poligon"). İkisi de aynı ad çözümüne
+// dayanmalı, yoksa aynı bacak iki yerde iki başka yer adıyla görünür.
+function legUclari(leg, legs = null, index = -1, uclar = {}) {
+  const liste = Array.isArray(legs) ? legs : [];
+  const i = index >= 0 ? index : liste.indexOf(leg);
+  // Uç adı yalnız İLK bacağın kalkışına ve SON bacağın varışına düşer;
+  // aradaki bacakların uçları gerçek durak adlarıdır, onlara dokunulmaz.
+  const sonMu = i >= 0 ? i === liste.length - 1 : false;
+  return {
+    nereden: yer(leg.from) || (i === 0 ? yer(uclar.baslangic) : null),
+    nereye: yer(leg.to) || (sonMu ? yer(uclar.varis) : null),
+  };
+}
+
+// Adım metni + çözülmüş uçlar. `nereden`/`nereye` dönmesi bilerek: arayüz
+// "şuradan şuraya" satırını kendi uydurmasın, uç adlarını buradan alsın.
+function getLegInstruction(leg, legs = null, index = -1, uclar = {}) {
+  const uc = legUclari(leg, legs, index, uclar);
+  return { ...adimMetni(leg, legs, index, uc), ...uc };
+}
+
+function adimMetni(leg, legs, index, uc) {
   const liste = Array.isArray(legs) ? legs : [];
   const i = index >= 0 ? index : liste.indexOf(leg);
   const sonraki = i >= 0 ? liste[i + 1] : undefined;
   const sonMu = i >= 0 ? i === liste.length - 1 : false;
-
-  const nereye = yer(leg.to);
-  const nereden = yer(leg.from);
+  const { nereden, nereye } = uc;
 
   if (leg.mode === "WALK") {
     if (sonraki && TRANSIT_MODES.includes(sonraki.mode)) {
@@ -806,17 +1104,11 @@ function getLegInstruction(leg, legs = null, index = -1) {
   }
 
   if (TRANSIT_MODES.includes(leg.mode)) {
-    // Hat numarası olmayan servisler var: İZBAN seferlerinin GTFS'te
-    // short_name'i yok ve "Araca ... bin" diye çıkıyordu. O durumda modun
-    // adı ("Banliyö", "Metro", "Tramvay") çok daha bilgilendirici.
     const hat = leg.routeName
       ? `${leg.routeName} hattına`
       : leg.label ? `${leg.label} hattına` : "Araca";
     const bin = nereden ? `${hat} ${nereden} durağından bin` : `${hat} bin`;
     const inis = nereye ? `${nereye} durağında in` : "Son durakta in";
-    // Bisiklet bu araca BİNİYOR mu? Cevap ancak listeye bakınca verilebilir:
-    // bisiklet bacağı transitten SONRA da devam ediyorsa bisiklet yanındadır.
-    // Kullanıcının bilmesi gereken tam olarak bu — bırakacak mı, alacak mı.
     const oncedenBisiklet = liste.slice(0, i).some((l) => BISIKLET_MODLARI.includes(l.mode));
     const sonradanBisiklet = liste.slice(i + 1).some((l) => BISIKLET_MODLARI.includes(l.mode));
     const bisikletYanimda = oncedenBisiklet && sonradanBisiklet;
@@ -841,9 +1133,6 @@ function getLegInstruction(leg, legs = null, index = -1) {
       return { title: "Bisikletle varışa git", detail: `${dk(leg)} sürüş · son adım` };
     }
     if (TRANSIT_MODES.includes(sonraki.mode)) {
-      // Bisikleti park mı edecek, yanına mı alacak? Sonrasında yine bisiklet
-      // bacağı varsa yanına alıyordur (metro, tramvay ve İZBAN'a bisiklet
-      // binebiliyor — bkz. izmir_backend/docs/API.md).
       const yanindaGotururuyor = liste.slice(i + 1).some((l) => BISIKLET_MODLARI.includes(l.mode));
       return {
         title: nereye ? `Bisikletle ${nereye} istasyonuna git` : "Bisikletle istasyona git",
@@ -865,5 +1154,32 @@ function getLegInstruction(leg, legs = null, index = -1) {
   return { title: nereye ? `${nereye} noktasına devam et` : "Devam et", detail: dk(leg) };
 }
 
-global.RS = { SCORING, WALK_LEG_TARGET, BIKE_LEG_MIN, MOD_AMACI, MUTLAK_YURUYUS_TAVANI, YURUYUS_BACAK_TAVANI_SN, BISIKLET_ASGARI_PAY, MODE_STYLE, NON_TRANSIT_MODES, resolveProfileKey, calcLegDistanceMeters, rankItineraries, selectCandidates, buildRouteResult, getLegInstruction, CANDIDATE_DEFS, ADAY_OLCULERI, MAX_ROUTES, calcCarbonGrams, candidateKey, calcJourneyFare, ONERI_TOLERANSI, oneriSinirinaUydur, ayniHattiTekilleştir, decodePolyline };
+// ─── Kartın tek satırlık güzergâh özeti ────────────────────────────────
+// Kullanıcı bildirimi: "yolculuk görünüyor ama nereden nereye gidileceği
+// anlaşılmıyor". Kapalı kartta yalnız süre, mesafe ve mod ikonları vardı;
+// hangi duraktan binilip nerede inileceği ancak kart AÇILINCA görülüyordu.
+//
+// Zincir, yolculuğun kırılma noktalarını verir: binilen durak, aktarma
+// durakları ve inilen durak.
+//
+// Transit yoksa (saf bisiklet/araba/yürüyüş) zincir BOŞTUR — uçları
+// tekrarlamaz. Kırılma noktası olmayan bir yolculukta söylenecek tek şey
+// zaten uçlardır ve onları listenin başlığı söylüyor; aynı iki adı bir de
+// kartın içine yazmak bilgi eklemiyor, satır ekliyordu.
+function guzergahZinciri(legs) {
+  const liste = Array.isArray(legs) ? legs : [];
+  const transit = liste.filter((l) => TRANSIT_MODES.includes(l.mode));
+  if (transit.length === 0) return [];
+
+  const noktalar = [];
+  transit.forEach((l, i) => {
+    noktalar.push(yer(l.from) || "Durak");
+    if (i === transit.length - 1) noktalar.push(yer(l.to) || "Son durak");
+  });
+  // Aynı durakta aktarmada iniş ve biniş adı aynıdır; iki kez yazmak
+  // zincirde olmayan bir adım varmış izlenimi veriyor.
+  return noktalar.filter((ad, i) => ad !== noktalar[i - 1]);
+}
+
+global.RS = { SCORING, WALK_LEG_TARGET, BIKE_LEG_MIN, MOD_AMACI, MUTLAK_YURUYUS_TAVANI, YURUYUS_BACAK_TAVANI_SN, BISIKLET_ASGARI_PAY, MODE_STYLE, NON_TRANSIT_MODES, resolveProfileKey, calcLegDistanceMeters, rankItineraries, selectCandidates, buildRouteResult, getLegInstruction, guzergahZinciri, CANDIDATE_DEFS, ADAY_OLCULERI, MAX_ROUTES, calcCarbonGrams, candidateKey, calcJourneyFare, ONERI_TOLERANSI, oneriSinirinaUydur, ayniHattiTekilleştir, decodePolyline };
 })(typeof window !== "undefined" ? window : globalThis);

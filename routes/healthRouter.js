@@ -11,18 +11,6 @@ const istasyon  = require("../services/RayliIstasyonService");
 const router = express.Router();
 const startedAt = Date.now();
 
-// Bu servisin karakteristik hata biçimi sessiz bozulmadır: her şey 200
-// döner ama içerik yanlıştır. Üç örnek, üçü de yaşandı ya da yaşanabilir:
-//   • Overpass düşer → istasyon listesi aylar öncesinin build-cache'inden gelir
-//   • İZELMAN düşer → P+R lot sayısı 0'a iner, park_and_ride rotaları kaybolur
-//   • GTFS calendar penceresi biter → toplu taşıma rotaları hatasız yok olur
-// Hiçbiri log'a hata yazmaz. Bu uçların işi bunları görünür kılmaktır.
-
-// ─── /health — canlılık (liveness) ─────────────────────────────────────
-// Ucuz ve HER ZAMAN 200: hiç ağ isteği yapmaz, yalnızca "Node ayakta mı"
-// sorusunu yanıtlar. Platform healthcheck'i ve start.sh'ın hazırlık
-// yoklaması bunu kullanmalı — OTP'ye bağlanırsa OTP'nin ~1 dakikalık
-// açılışı boyunca deploy başarısız sayılır.
 router.get("/health", (req, res) => {
   res.json({
     status: "ok",
@@ -31,11 +19,6 @@ router.get("/health", (req, res) => {
   });
 });
 
-// ─── /health/ready — hazırlık + veri sağlığı (readiness) ───────────────
-// İzlemenin çekeceği uç. OTP'ye tek bir hafif GraphQL sorgusu atar.
-//   ok       → her şey taze
-//   degraded → servis cevap veriyor ama veri bayat/eksik (yukarıdaki 3 örnek)
-//   down     → OTP erişilemez; rota üretilemiyor  → HTTP 503
 router.get("/health/ready", asyncHandler(async (req, res) => {
   const bike = bisimBolge.getStatus();
   const park = parking.getStatus();
@@ -49,9 +32,6 @@ router.get("/health/ready", asyncHandler(async (req, res) => {
   if (otp.daysRemaining != null && otp.daysRemaining >= 0 && otp.daysRemaining < 7)
                                               issues.push("graph_expiring_soon");
   if (bike.bolgeler === 0)                    issues.push("bisim_bolge_yok");
-  // OTP grafiğinde bölge var ama hepsi kapalıysa bisiklet rotası hiç üretilmez.
-  // Bu sessiz bozulma gerçekten yaşandı: 52 istasyon yüklüydü ve hepsi
-  // allowPickupNow:false idi, kimse fark etmedi. Artık ölçülüyor.
   if (otp.reachable && otp.kiralamaBolge === 0)     issues.push("otp_kiralama_bolgesi_yok");
   if (otp.reachable && otp.kiralamaAcik === 0 && otp.kiralamaBolge > 0)
                                               issues.push("otp_kiralama_hepsi_kapali");
@@ -80,9 +60,7 @@ router.get("/health/ready", asyncHandler(async (req, res) => {
   });
 }));
 
-// OTP'nin ayakta olup olmadığını VE graph'ın hangi tarih aralığını
-// kapsadığını tek sorguda öğrenir. Timeout kısa: sağlık ucu yavaş olursa
-// izleme aracı zaman aşımını "servis öldü" diye raporlar.
+
 async function checkOtp() {
   const query = `{
     serviceTimeRange { start end }

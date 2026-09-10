@@ -13,8 +13,8 @@ const UCLAR = {
   "GET /bisim/stations": {
     zarf: "bolgeler",
     alanlar: ["id", "ad", "ilce", "lat", "lon", "yaricapM", "guven"],
-    ek: ["model", "updatedAt"],
-    not: "BİSİM 2025-08'de sabit istasyonları kaldırdı; bu uç artık BÖLGE döndürür, istasyon değil. Bisiklet hizmet alanı içinde her yere bırakılabilir, bu bölgelerde bırakınca bonus verilir. 'yaricapM' bölgenin yaklaşık yarıçapı, 'guven' konumun ne kadar doğrulandığıdır (yuksek/orta/dusuk).",
+    ek: ["model", "updatedAt", "hizmetAgi"],
+    not: "BİSİM 2025-08'de sabit istasyonları kaldırdı; bu uç artık BÖLGE döndürür, istasyon değil. Bisiklet hizmet alanı içinde her yere bırakılabilir, bu bölgelerde bırakınca bonus verilir. 'yaricapM' bölgenin yaklaşık yarıçapı, 'guven' konumun ne kadar doğrulandığıdır (yuksek/orta/dusuk). 'hizmetAgi' haritada çizilen alan: açık verideki bisiklet koridorlarının tamponlanmış hâli, GeoJSON MultiPolygon dizilimi ([[dışHalka, delik...]]). OTP'ye giden geofencing alanıyla aynı şey DEĞİLDİR — o rotalama sınırı olduğu için cömert bir dışbükey kabuktur.",
   },
   "GET /parking/stations": {
     zarf: "stations",

@@ -219,6 +219,197 @@ function serbestBisikletler() {
   return serbestCache;
 }
 
+// ─── Görüntü için hizmet ağı ────────────────────────────────────────────
+// OTP'ye giden alan (dışbükey kabuk) rotalama sınırıdır: cömert olmalı,
+// yoksa kiralama bacağı hiç kurulamaz. Haritada gösterilen ise koridorun
+// kendisi olmalı — kabuk körfezin suyunu da yutuyor. İkisi bilerek ayrı.
+//
+// Yöntem: koridorlar ızgaraya basılır, tampon kadar genişletilir, sonra
+// dolu hücrelerin sınırı halkalara çevrilir. Dış kütüphane yok.
+const AG_HUCRE_M  = 200;
+const AG_TAMPON_M = 600;
+
+// Kümelerdeki ilçelerin koridorları — Dikili, Çeşme, Torbalı BİSİM alanı değil.
+function koridorParcalari() {
+  const ilceler = new Set(KUMELER.flatMap((k) => k.ilceler));
+  const yollar = JSON.parse(fs.readFileSync(YOL_VERI, "utf8")).features;
+  const parcalar = [];
+  for (const f of yollar) {
+    if (!ilceler.has(f.properties.ilce)) continue;
+    const yur = (c) => {
+      if (typeof c[0][0] === "number") {
+        for (let i = 1; i < c.length; i++) parcalar.push([c[i - 1], c[i]]);
+      } else c.forEach(yur);
+    };
+    yur(f.geometry.coordinates);
+  }
+  return parcalar;
+}
+
+let hizmetAgiCache = null;
+function hizmetAgi() {
+  if (hizmetAgiCache) return hizmetAgiCache;
+  const parcalar = koridorParcalari();
+  if (!parcalar.length) return [];
+
+  // Bonus bölgeleri de tohum: Bornova'da bisiklet yolu verisi yok, yalnız
+  // koridorlardan üretilirse o bölge ağın dışında kalıyor.
+  const tohumlar = birakmaNoktalari().map((b) => [b.lon, b.lat]);
+
+  let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  for (const [lon, lat] of tohumlar) {
+    if (lon < minLon) minLon = lon;
+    if (lon > maxLon) maxLon = lon;
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+  }
+  for (const [a, b] of parcalar) {
+    for (const [lon, lat] of [a, b]) {
+      if (lon < minLon) minLon = lon;
+      if (lon > maxLon) maxLon = lon;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+  }
+
+  const refLat = (minLat + maxLat) / 2;
+  const hLat = AG_HUCRE_M / 111320;
+  const hLon = AG_HUCRE_M / (111320 * Math.cos(refLat * D));
+  const pay = Math.ceil(AG_TAMPON_M / AG_HUCRE_M) + 1;
+
+  const en  = Math.ceil((maxLon - minLon) / hLon) + 2 * pay + 2;
+  const boy = Math.ceil((maxLat - minLat) / hLat) + 2 * pay + 2;
+  const lon0 = minLon - pay * hLon;
+  const lat0 = minLat - pay * hLat;
+
+  const izgara = new Uint8Array(en * boy);
+  const isaretle = (x, y) => { if (x >= 0 && y >= 0 && x < en && y < boy) izgara[y * en + x] = 1; };
+
+  // Koridorları bas: her parça hücrenin yarısı adımlarla örneklenir.
+  for (const [a, b] of parcalar) {
+    const adim = Math.max(1, Math.ceil(Math.max(
+      Math.abs(b[0] - a[0]) / hLon, Math.abs(b[1] - a[1]) / hLat
+    ) * 2));
+    for (let i = 0; i <= adim; i++) {
+      const t = i / adim;
+      isaretle(
+        Math.floor((a[0] + (b[0] - a[0]) * t - lon0) / hLon),
+        Math.floor((a[1] + (b[1] - a[1]) * t - lat0) / hLat)
+      );
+    }
+  }
+
+  for (const [lon, lat] of tohumlar) {
+    isaretle(Math.floor((lon - lon0) / hLon), Math.floor((lat - lat0) / hLat));
+  }
+
+  // Tampon: daire biçiminde genişlet.
+  const r = Math.round(AG_TAMPON_M / AG_HUCRE_M);
+  const disk = [];
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) if (dx * dx + dy * dy <= r * r) disk.push([dx, dy]);
+  }
+  const genis = new Uint8Array(en * boy);
+  for (let y = 0; y < boy; y++) {
+    for (let x = 0; x < en; x++) {
+      if (!izgara[y * en + x]) continue;
+      for (const [dx, dy] of disk) {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && ny >= 0 && nx < en && ny < boy) genis[ny * en + nx] = 1;
+      }
+    }
+  }
+
+  hizmetAgiCache = halkalar(genis, en, boy, lon0, lat0, hLon, hLat);
+  return hizmetAgiCache;
+}
+
+// Dolu hücrelerin sınırını kapalı halkalara çevirir. Kenarlar dolu hücre
+// SOLDA kalacak şekilde yönlendirilir: dış halkalar CCW, delikler CW çıkar.
+function halkalar(izgara, en, boy, lon0, lat0, hLon, hLat) {
+  const dolu = (x, y) => x >= 0 && y >= 0 && x < en && y < boy && izgara[y * en + x] === 1;
+  const kenarlar = new Map();   // "x,y" → [[hedefX, hedefY], ...]
+  const ekle = (ax, ay, bx, by) => {
+    const k = `${ax},${ay}`;
+    if (!kenarlar.has(k)) kenarlar.set(k, []);
+    kenarlar.get(k).push([bx, by]);
+  };
+
+  for (let y = 0; y < boy; y++) {
+    for (let x = 0; x < en; x++) {
+      if (!dolu(x, y)) continue;
+      if (!dolu(x, y - 1)) ekle(x, y, x + 1, y);
+      if (!dolu(x + 1, y)) ekle(x + 1, y, x + 1, y + 1);
+      if (!dolu(x, y + 1)) ekle(x + 1, y + 1, x, y + 1);
+      if (!dolu(x - 1, y)) ekle(x, y + 1, x, y);
+    }
+  }
+
+  const cikti = [];
+  for (const [bas] of kenarlar) {
+    while (kenarlar.get(bas)?.length) {
+      const halka = [];
+      let [x, y] = bas.split(",").map(Number);
+      while (true) {
+        const komsu = kenarlar.get(`${x},${y}`);
+        if (!komsu || !komsu.length) break;
+        const [nx, ny] = komsu.pop();
+        halka.push([x, y]);
+        x = nx; y = ny;
+        if (x === Number(bas.split(",")[0]) && y === Number(bas.split(",")[1])) break;
+      }
+      if (halka.length >= 4) cikti.push(halka);
+    }
+  }
+
+  // Aynı yönde giden ardışık kenarları birleştir — merdiven basamakları
+  // yüzlerce gereksiz köşe üretiyor.
+  const sadelestir = (h) => {
+    const s = [];
+    for (let i = 0; i < h.length; i++) {
+      const o = h[(i - 1 + h.length) % h.length], n = h[(i + 1) % h.length];
+      if ((h[i][0] - o[0]) * (n[1] - h[i][1]) !== (h[i][1] - o[1]) * (n[0] - h[i][0])) s.push(h[i]);
+    }
+    return s.length >= 3 ? s : h;
+  };
+
+  const koordinat = ([x, y]) => [
+    +(lon0 + x * hLon).toFixed(6),
+    +(lat0 + y * hLat).toFixed(6),
+  ];
+  const alan = (h) => {
+    let a = 0;
+    for (let i = 0; i < h.length; i++) {
+      const [x1, y1] = h[i], [x2, y2] = h[(i + 1) % h.length];
+      a += x1 * y2 - x2 * y1;
+    }
+    return a / 2;
+  };
+  const icinde = (nokta, halka) => {
+    let ic = false;
+    for (let i = 0, j = halka.length - 1; i < halka.length; j = i++) {
+      const [xi, yi] = halka[i], [xj, yj] = halka[j];
+      if ((yi > nokta[1]) !== (yj > nokta[1]) &&
+          nokta[0] < ((xj - xi) * (nokta[1] - yi)) / (yj - yi) + xi) ic = !ic;
+    }
+    return ic;
+  };
+
+  const dislar = [], delikler = [];
+  for (const h of cikti.map(sadelestir)) (alan(h) > 0 ? dislar : delikler).push(h);
+
+  // GeoJSON Polygon dizilimi: [dışHalka, delik, delik...]
+  const parcalar = dislar
+    .sort((a, b) => Math.abs(alan(b)) - Math.abs(alan(a)))
+    .map((d) => [d.concat([d[0]]).map(koordinat)]);
+
+  for (const delik of delikler) {
+    const i = dislar.findIndex((d) => icinde(delik[0], d));
+    if (i >= 0) parcalar[i].push(delik.concat([delik[0]]).map(koordinat));
+  }
+  return parcalar;
+}
+
 // GBFS 2.3 geofencing_zones.json
 // DİKKAT: OTP geometriyi MultiPolygon olarak okur. Polygon gönderilirse
 // ayrıştırma hata verir ve bu hata TÜM feed yüklemesini iptal eder —
@@ -262,4 +453,4 @@ function getStatus() {
   };
 }
 
-module.exports = { birakmaNoktalari, geofencingZones, hizmetAlani, serbestBisikletler, getStatus };
+module.exports = { birakmaNoktalari, geofencingZones, hizmetAlani, hizmetAgi, serbestBisikletler, getStatus };

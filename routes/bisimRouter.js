@@ -15,6 +15,9 @@ router.get(["/stations", "/bolgeler"], (req, res) => {
   res.json({
     model: "bolge",
     bolgeler: bolgeService.birakmaNoktalari(),
+    // Haritada çizilen ağ. OTP'ye giden geofencing alanından AYRI: orası
+    // rotalama sınırı, burası koridorun kendisi (bkz. BisimBolgeService).
+    hizmetAgi: bolgeService.hizmetAgi(),
     updatedAt: new Date().toISOString(),
   });
 });

@@ -19,7 +19,8 @@ router.get("/parking/bike-racks", asyncHandler(async (req, res) => {
   res.json({ stations, updatedAt: new Date().toISOString() });
 }));
 
-// Adres araması. Boş sorgu ya da 3 harften kısa girdi ağa hiç çıkmaz.
+// Adres araması. Boş sorgu ya da 2 harften kısa girdi ağa hiç çıkmaz
+// (GeocodingService.MIN_UZUNLUK).
 router.get("/geocode", asyncHandler(async (req, res) => {
   const results = await searchAddress(req.query.q);
   res.json({ results });

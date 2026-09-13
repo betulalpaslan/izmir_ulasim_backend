@@ -25,8 +25,10 @@ router.post("/get-route", asyncHandler(async (req, res) => {
     if (err.otpErrors) {
       return res.status(400).json({ error: "OTP GraphQL hatası", details: err.otpErrors });
     }
-    console.error("Backend Hatası:", err.message);
-    return res.status(500).json({ error: "Ulaşım sunucusuna (OTP) şu an ulaşılamıyor." });
+    // OTP'ye ulaşılamaması 502 (tekrar denenebilir), kod hatası 500; ayrımı
+    // errorHandler yapar. Burada her şeye 500 dönmek, uygulamaya "veri
+    // kaynağına ulaşılamıyor" yerine "sunucuda hata" dedirtiyordu.
+    throw err;
   }
 }));
 

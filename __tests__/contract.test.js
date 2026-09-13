@@ -303,4 +303,14 @@ describe("hata sözleşmesi", () => {
     expect(res.body).toHaveProperty("error");
     expect(res.body).toHaveProperty("detail");
   });
+
+  test("OTP'ye ulaşılamazsa POST /get-route 502 + {error, detail}", async () => {
+    axios.post.mockRejectedValue(Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }));
+    const res = await request(app)
+      .post("/get-route")
+      .send({ from: { lat: 38.41, lon: 27.12 }, to: { lat: 38.44, lon: 27.15 } })
+      .expect(502);
+    expect(res.body).toHaveProperty("error");
+    expect(res.body).toHaveProperty("detail");
+  });
 });

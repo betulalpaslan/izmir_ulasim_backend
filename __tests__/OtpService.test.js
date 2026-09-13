@@ -236,8 +236,10 @@ describe("bisiklet sorgularının birleştirilmesi", () => {
     // Taban sorgusu bisikletsiz erişim istemeli.
     expect(axios.post.mock.calls[2][1].variables.modes.transit.access).toEqual(["WALK"]);
     expect(r.bisikletsizEnIyiSn).toBe(2400);
+    expect(r.duzTransitEnIyiSn).toBe(2400);
     // ...ve güzergâhlara iliştirilmeli: puanlama katmanı oradan okuyor.
     expect(r.itineraries[0].bisikletsizEnIyiSn).toBe(2400);
+    expect(r.itineraries[0].duzTransitEnIyiSn).toBe(2400);
     // Taban güzergâhları LİSTEYE GİRMEZ — mod saflığı.
     expect(r.itineraries).toHaveLength(1);
   });
@@ -250,10 +252,37 @@ describe("bisiklet sorgularının birleştirilmesi", () => {
 
     const r = await planRoute({ ...KONUM, profile: "bicycle", bikeType: "PARK" });
     expect(r.bisikletsizEnIyiSn).toBeNull();
+    expect(r.duzTransitEnIyiSn).toBeNull();
     expect(r.itineraries).toHaveLength(1);
   });
 
-  test("bisiklet dışı profillerde tek sorgu atılır", async () => {
+  // P+R'da taban eleme için değil, mod uymadığında gösterilen çıkış teklifi için.
+  test("P+R profilinde taban çizgisi yalnız yeni adla iliştirilir", async () => {
+    const parkVeDevam = [
+      { mode: "CAR", duration: 600, distance: 5000 },
+      { mode: "SUBWAY", duration: 1200, distance: 9000 },
+    ];
+    const yuruyusluTaban = [
+      { mode: "WALK", duration: 600, distance: 800 },
+      { mode: "SUBWAY", duration: 1800, distance: 12000 },
+    ];
+    axios.post
+      .mockResolvedValueOnce(yanit(parkVeDevam))
+      .mockResolvedValueOnce(yanit(yuruyusluTaban));
+
+    const r = await planRoute({ ...KONUM, profile: "park_and_ride" });
+
+    expect(axios.post).toHaveBeenCalledTimes(2);
+    expect(axios.post.mock.calls[1][1].variables.modes.transit.access).toEqual(["WALK"]);
+    expect(r.duzTransitEnIyiSn).toBe(2400);
+    expect(r.itineraries[0].duzTransitEnIyiSn).toBe(2400);
+    // Eski ad yalnız bisiklette taşınır.
+    expect(r.bisikletsizEnIyiSn).toBeNull();
+    expect(r.itineraries[0]).not.toHaveProperty("bisikletsizEnIyiSn");
+    expect(r.itineraries).toHaveLength(1);
+  });
+
+  test("toplu taşıma profilinde tek sorgu atılır", async () => {
     axios.post.mockResolvedValueOnce(yanit([{ mode: "WALK", duration: 280, distance: 350 }]));
     await planRoute({ ...KONUM, profile: "transit" });
     expect(axios.post).toHaveBeenCalledTimes(1);

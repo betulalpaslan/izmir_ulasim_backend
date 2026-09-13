@@ -177,24 +177,35 @@ async function planRoute({ fromLat, fromLon, toLat, toLon, profile, modes, bikeT
   });
   let routingErrors = basarili.flatMap((x) => x.hatalar);
 
-  let bisikletsizEnIyiSn = null;
-  if (profile === "bicycle") {
+  // Düz toplu taşıma taban çizgisi: seçilen aracın işe yarayıp yaramadığı
+  // ancak araçsız alternatifle karşılaştırılarak söylenebilir. Bisiklette
+  // eleme için (MOD_AMACI.bicycle_park), P+R'da mod uymadığında gösterilen
+  // "toplu taşıma X dk" çıkış teklifi için gerekir. Sorgu düşerse alan null
+  // kalır; eleme de teklif de açık fail eder, tahmin üretilmez.
+  let duzTransitEnIyiSn = null;
+  if (profile === "bicycle" || profile === "park_and_ride") {
     try {
       const taban = await sorgula({
         transit: { access: ["WALK"], egress: ["WALK"], transfer: ["WALK"], transit: transitPrefs },
       });
       const sureler = taban.liste.map((it) =>
         it.legs.reduce((t, l) => t + (l.duration || 0), 0));
-      if (sureler.length) bisikletsizEnIyiSn = Math.min(...sureler);
+      if (sureler.length) duzTransitEnIyiSn = Math.min(...sureler);
     } catch (err) {
-      console.warn("Bisikletsiz taban çizgisi alınamadı:", err.message);
+      console.warn("Düz toplu taşıma taban çizgisi alınamadı:", err.message);
     }
   }
-  if (bisikletsizEnIyiSn != null) {
-    itineraries = itineraries.map((it) => ({ ...it, bisikletsizEnIyiSn }));
+  // Eski ad yalnız bisiklette taşınır: MOD_AMACI.bicycle_park onu okuyor.
+  const bisikletsizEnIyiSn = profile === "bicycle" ? duzTransitEnIyiSn : null;
+  if (duzTransitEnIyiSn != null) {
+    itineraries = itineraries.map((it) => ({
+      ...it,
+      duzTransitEnIyiSn,
+      ...(bisikletsizEnIyiSn != null ? { bisikletsizEnIyiSn } : {}),
+    }));
   }
 
-  return { itineraries, routingErrors, profile, bisikletsizEnIyiSn };
+  return { itineraries, routingErrors, profile, duzTransitEnIyiSn, bisikletsizEnIyiSn };
 }
 
 module.exports = {

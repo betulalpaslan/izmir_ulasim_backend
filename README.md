@@ -8,7 +8,7 @@ planlanabilir.
 
 Node.js / Express · OpenTripPlanner 2.8.1 · GBFS 2.3 · Docker · Railway
 
-Mobil uygulama (React Native / Expo) ayrı bir depodadır.
+Mobil uygulama (React Native / Expo) ayrı bir depodadır: [izmir_ulasim](https://github.com/betulalpaslan/izmir_ulasim).
 
 ---
 

@@ -55,7 +55,20 @@ describe("errorHandler", () => {
     errorHandler(err, sahteReq(), res, jest.fn());
     expect(res.statusCode).toBe(502);
     expect(res.body.error).toBe("Dış servise ulaşılamıyor.");
-    expect(res.body.detail).toBe("timeout of 8000ms exceeded");
+  });
+
+  // Hata metni iç yapıyı ele veriyordu ("connect ECONNREFUSED 127.0.0.1:8080"
+  // OTP'nin portunu söylüyor). Detay logda kalmalı, yanıtta yalnız o satırı
+  // logda bulduran kimlik olmalı.
+  test("iç hata metni istemciye sızmaz, loga yazılır", () => {
+    const res = sahteRes();
+    const err = Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:8080"), { isAxiosError: true });
+    errorHandler(err, sahteReq(), res, jest.fn());
+    expect(res.body).not.toHaveProperty("detail");
+    expect(JSON.stringify(res.body)).not.toMatch(/127\.0\.0\.1|8080/);
+    expect(res.body.istekId).toMatch(/^[0-9a-f]{8}$/);
+    expect(logSpy.mock.calls[0].join(" ")).toContain("connect ECONNREFUSED 127.0.0.1:8080");
+    expect(logSpy.mock.calls[0].join(" ")).toContain(res.body.istekId);
   });
 
   test("ağ hata kodları 502 olur", () => {
@@ -97,5 +110,65 @@ describe("notFoundHandler", () => {
     notFoundHandler(sahteReq({ originalUrl: "/bisim/gbsf" }), res);
     expect(res.statusCode).toBe(404);
     expect(res.body).toEqual({ error: "Bilinmeyen uç nokta.", path: "/bisim/gbsf" });
+  });
+});
+
+// Tanılama uçları OTP şemasını ve feed durumunu döküyor, /otp-rental-test
+// ayrıca OTP'ye gerçek bir plan sorgusu attırıyor. Anahtarsız istek "böyle
+// bir uç yok" cevabı almalı: 403 demek ucun VAR olduğunu söylemek olurdu.
+describe("taniKorumasi", () => {
+  const taniKorumasi = require("../middleware/taniKorumasi");
+  const eskiAnahtar = process.env.TANI_ANAHTARI;
+  const req = (over = {}) => ({
+    method: "GET", originalUrl: "/otp-status", path: "/otp-status",
+    query: {}, get: () => undefined, ...over,
+  });
+
+  afterEach(() => {
+    if (eskiAnahtar === undefined) delete process.env.TANI_ANAHTARI;
+    else process.env.TANI_ANAHTARI = eskiAnahtar;
+  });
+
+  test("ortamda anahtar tanımlı değilse uç yokmuş gibi davranır", () => {
+    delete process.env.TANI_ANAHTARI;
+    const res = sahteRes();
+    const next = jest.fn();
+    taniKorumasi(req({ query: { anahtar: "ne-olursa" } }), res, next);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(404);
+    expect(res.body).toEqual({ error: "Bilinmeyen uç nokta.", path: "/otp-status" });
+  });
+
+  test("yanlış anahtar geçmez", () => {
+    process.env.TANI_ANAHTARI = "dogru-anahtar";
+    const res = sahteRes();
+    const next = jest.fn();
+    taniKorumasi(req({ query: { anahtar: "yanlis" } }), res, next);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(404);
+  });
+
+  test("doğru anahtar başlıkla da sorgu parametresiyle de geçer", () => {
+    process.env.TANI_ANAHTARI = "dogru-anahtar";
+
+    const basliklaNext = jest.fn();
+    taniKorumasi(req({ get: (ad) => (ad === "x-tani-anahtari" ? "dogru-anahtar" : undefined) }),
+      sahteRes(), basliklaNext);
+    expect(basliklaNext).toHaveBeenCalled();
+
+    const sorguylaNext = jest.fn();
+    taniKorumasi(req({ query: { anahtar: "dogru-anahtar" } }), sahteRes(), sorguylaNext);
+    expect(sorguylaNext).toHaveBeenCalled();
+  });
+
+  // Yanıt, anahtarın taşındığı sorgu dizesini geri yansıtmamalı.
+  test("404 gövdesi anahtarı geri yansıtmaz", () => {
+    process.env.TANI_ANAHTARI = "dogru-anahtar";
+    const res = sahteRes();
+    taniKorumasi(
+      req({ originalUrl: "/otp-status?anahtar=yanlis", query: { anahtar: "yanlis" } }),
+      res, jest.fn()
+    );
+    expect(JSON.stringify(res.body)).not.toContain("yanlis");
   });
 });

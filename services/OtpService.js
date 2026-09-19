@@ -70,7 +70,14 @@ function buildModesInputs(profile, bikeType, transitPrefs) {
 }
 
 async function planRoute({ fromLat, fromLon, toLat, toLon, profile, modes, bikeType, numItineraries, dateTime: requestedDateTime }) {
-  const first = Number.isInteger(numItineraries) ? numItineraries : 10;
+  // Üst sınır şart: bu değer OTP'ye olduğu gibi gidiyor ve bisiklet modunda
+  // ÜÇ sorgunun birden maliyetini belirliyor. Sınırsızken tek bir istek
+  // (numItineraries: 100000) OTP'yi herkes için meşgul edebiliyordu.
+  // 25, uygulamanın istediği en büyük değer (Services/routeService.js).
+  const EN_FAZLA_GUZERGAH = 25;
+  const first = Number.isInteger(numItineraries)
+    ? Math.min(Math.max(numItineraries, 1), EN_FAZLA_GUZERGAH)
+    : 10;
   const parsed = requestedDateTime ? new Date(requestedDateTime) : null;
   const dateTime =
     parsed && !Number.isNaN(parsed.getTime()) ? parsed.toISOString() : new Date().toISOString();

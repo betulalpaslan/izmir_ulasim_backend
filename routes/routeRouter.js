@@ -1,5 +1,6 @@
 const express = require("express");
 const asyncHandler = require("../middleware/asyncHandler");
+const taniKorumasi = require("../middleware/taniKorumasi");
 const config = require("../config");
 const axios = require("axios");
 const { safeFloat, planRoute } = require("../services/OtpService");
@@ -23,7 +24,10 @@ router.post("/get-route", asyncHandler(async (req, res) => {
     return res.json(result);
   } catch (err) {
     if (err.otpErrors) {
-      return res.status(400).json({ error: "OTP GraphQL hatası", details: err.otpErrors });
+      // Hata listesi OTP'nin şemasını ele veriyordu ve istemcide hiç
+      // kullanılmıyor; loga yazılır, dışarı yalnız sebep çıkar.
+      console.error("OTP GraphQL hatası:", JSON.stringify(err.otpErrors));
+      return res.status(400).json({ error: "İstek OTP tarafından reddedildi." });
     }
     // OTP'ye ulaşılamaması 502 (tekrar denenebilir), kod hatası 500; ayrımı
     // errorHandler yapar. Burada her şeye 500 dönmek, uygulamaya "veri
@@ -34,7 +38,7 @@ router.post("/get-route", asyncHandler(async (req, res) => {
 
 
 
-router.get("/otp-status", asyncHandler(async (req, res) => {
+router.get("/otp-status", taniKorumasi, asyncHandler(async (req, res) => {
   const query = `{
     serviceTimeRange { start end }
     feeds { feedId agencies { name } }

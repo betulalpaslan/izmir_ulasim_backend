@@ -303,3 +303,35 @@ describe("bisiklet sorgularının birleştirilmesi", () => {
     expect(r).not.toHaveProperty("bisikletsizYedek");
   });
 });
+
+// Bu değer OTP'ye olduğu gibi gidiyor ve bisiklet modunda üç sorgunun
+// birden maliyetini belirliyor: sınırsızken tek istek OTP'yi meşgul
+// edebiliyordu.
+describe("numItineraries sınırı", () => {
+  const KONUM = { fromLat: 38.41, fromLon: 27.12, toLat: 38.44, toLon: 27.15 };
+  const yanit = { data: { data: { planConnection: { edges: [], routingErrors: [] } } } };
+  const gidenFirst = () => axios.post.mock.calls[0][1].variables.first;
+
+  beforeEach(() => { jest.clearAllMocks(); axios.post.mockResolvedValue(yanit); });
+
+  test("tavanın üstü 25'e kırpılır", async () => {
+    await planRoute({ ...KONUM, profile: "transit", numItineraries: 100000 });
+    expect(gidenFirst()).toBe(25);
+  });
+
+  test("0 ve negatif değer 1'e çekilir", async () => {
+    await planRoute({ ...KONUM, profile: "transit", numItineraries: 0 });
+    expect(gidenFirst()).toBe(1);
+    jest.clearAllMocks();
+    await planRoute({ ...KONUM, profile: "transit", numItineraries: -5 });
+    expect(gidenFirst()).toBe(1);
+  });
+
+  test("geçerli değer ve varsayılan korunur", async () => {
+    await planRoute({ ...KONUM, profile: "transit", numItineraries: 25 });
+    expect(gidenFirst()).toBe(25);
+    jest.clearAllMocks();
+    await planRoute({ ...KONUM, profile: "transit" });
+    expect(gidenFirst()).toBe(10);
+  });
+});

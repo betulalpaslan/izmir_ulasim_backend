@@ -1,5 +1,6 @@
 const express = require("express");
 const asyncHandler = require("../middleware/asyncHandler");
+const taniKorumasi = require("../middleware/taniKorumasi");
 const config = require("../config");
 const axios = require("axios");
 const bolgeService = require("../services/BisimBolgeService");
@@ -146,7 +147,7 @@ router.get("/gbfs/geofencing_zones", (req, res) => {
 });
 
 // OTP'nin BİSİM istasyonlarını yükleyip yüklemediğini kontrol eder
-router.get("/otp-check", asyncHandler(async (req, res) => {
+router.get("/otp-check", taniKorumasi, asyncHandler(async (req, res) => {
   const query = `{
     vehicleRentalStations {
       stationId
@@ -172,7 +173,7 @@ router.get("/otp-check", asyncHandler(async (req, res) => {
 }));
 
 // BICYCLE_RENTAL testi — OtpService ile aynı değişken formatı kullanır (inline enum'dan kaçınır)
-router.get("/otp-rental-test", asyncHandler(async (req, res) => {
+router.get("/otp-rental-test", taniKorumasi, asyncHandler(async (req, res) => {
   const query = `
     query Plan($dateTime: OffsetDateTime!, $modes: PlanModesInput) {
       planConnection(
@@ -207,7 +208,7 @@ router.get("/otp-rental-test", asyncHandler(async (req, res) => {
 }));
 
 // PlanPreferencesInput içindeki alanları göster
-router.get("/otp-schema", asyncHandler(async (req, res) => {
+router.get("/otp-schema", taniKorumasi, asyncHandler(async (req, res) => {
   const query = `{
     __type(name: "PlanPreferencesInput") {
       inputFields {

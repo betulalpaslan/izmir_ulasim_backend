@@ -295,22 +295,26 @@ describe("hata sözleşmesi", () => {
   });
 
   // İstemci için fark önemli: 502 "tekrar dene", 500 "denemenin faydası yok".
-  test("dış kaynak tükendiğinde 502 + {error, detail}", async () => {
+  test("dış kaynak tükendiğinde 502 + {error, istekId}", async () => {
     const fs = require("fs");
     jest.spyOn(fs, "readFileSync").mockImplementation(() => { throw new Error("ENOENT"); });
     axios.get.mockRejectedValue(new Error("overpass down"));
     const res = await request(app).get("/parking/osm").expect(502);
     expect(res.body).toHaveProperty("error");
-    expect(res.body).toHaveProperty("detail");
+    // Ham hata metni artık dışarı çıkmıyor: yalnız logdaki satırı bulduran kimlik.
+    expect(res.body).not.toHaveProperty("detail");
+    expect(res.body.istekId).toMatch(/^[0-9a-f]{8}$/);
   });
 
-  test("OTP'ye ulaşılamazsa POST /get-route 502 + {error, detail}", async () => {
+  test("OTP'ye ulaşılamazsa POST /get-route 502 + {error, istekId}", async () => {
     axios.post.mockRejectedValue(Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }));
     const res = await request(app)
       .post("/get-route")
       .send({ from: { lat: 38.41, lon: 27.12 }, to: { lat: 38.44, lon: 27.15 } })
       .expect(502);
     expect(res.body).toHaveProperty("error");
-    expect(res.body).toHaveProperty("detail");
+    // Ham hata metni artık dışarı çıkmıyor: yalnız logdaki satırı bulduran kimlik.
+    expect(res.body).not.toHaveProperty("detail");
+    expect(res.body.istekId).toMatch(/^[0-9a-f]{8}$/);
   });
 });
